@@ -1,9 +1,13 @@
-// Shared plots: loading, saving, image upload, live updates, and rendering.
+// Shared plots: loading, saving, image upload, live updates, rendering, and the
+// pay-to-overtake mechanic.
 //
-// Positions are stored as FRACTIONS of the canvas (0..1) rather than pixels,
-// so a plot claimed on a phone lands in the same relative place on a laptop.
+// Positions are stored as FRACTIONS of the canvas (0..1) so a plot claimed on a
+// phone lands in the same relative place on a laptop. Each plot carries its
+// owner (id/name/color) and a current value (`price_paid`); covering a plot
+// costs more than that value (see pricing.placementCost).
 import { supabase, isSupabaseConfigured } from './supabase.js';
 import { canvas, emptyHint } from './dom.js';
+import { WORLD_ID } from './config.js';
 
 const PDF_SVG =
   '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -14,16 +18,16 @@ const PDF_SVG =
   '<text x="24" y="30" text-anchor="middle" fill="#fff" font-size="7" font-family="Arial" font-weight="bold">PDF</text>' +
   '</svg>';
 
-// In-memory list of plots currently on the board (each carries its DOM element).
+// Active plots currently on the board (each carries its DOM element).
 const plots = [];
 const renderedIds = new Set();
+let contestedEls = [];
 
-// How many plots have been claimed — drives the pricing base.
+// Active plot count drives the pricing base.
 export function getPlotCount() {
   return plots.length;
 }
 
-// Convert a plot's stored fractions into pixel position/size for this screen.
 function positionElement(el, plot) {
   const cr = canvas.getBoundingClientRect();
   el.style.left = plot.x * cr.width + 'px';
@@ -32,13 +36,15 @@ function positionElement(el, plot) {
   el.style.height = plot.height * cr.height + 'px';
 }
 
-// Draw a single plot onto the canvas (ignores duplicates by id).
+// Draw a single plot (ignores duplicates by id and inactive/overtaken plots).
 export function renderPlot(plot) {
+  if (plot.active === false) return;
   if (plot.id != null && renderedIds.has(plot.id)) return;
   if (plot.id != null) renderedIds.add(plot.id);
 
   const el = document.createElement('div');
   el.className = 'committed-plot';
+  if (plot.owner_color) el.style.borderColor = plot.owner_color;
   positionElement(el, plot);
 
   if (plot.is_image && plot.image_url) {
@@ -52,18 +58,83 @@ export function renderPlot(plot) {
     el.appendChild(wrap);
   }
 
+  if (plot.owner_name) {
+    const tag = document.createElement('div');
+    tag.className = 'owner-tag';
+    if (plot.owner_color) tag.style.background = plot.owner_color;
+    tag.textContent = plot.owner_name;
+    el.appendChild(tag);
+  }
+
   canvas.appendChild(el);
   plot.el = el;
   plots.push(plot);
   emptyHint.style.display = 'none';
 }
 
-// Reposition every plot — call this when the window/canvas resizes.
 export function relayoutPlots() {
   for (const plot of plots) positionElement(plot.el, plot);
 }
 
-// Upload an image file to storage and return its public URL.
+// ── Pay-to-overtake helpers ────────────────────────────────────────────────
+
+// Active plots whose CENTER falls inside the given tile (fractions of canvas).
+export function findContested(tile) {
+  return plots.filter((p) => {
+    const cx = p.x + p.width / 2;
+    const cy = p.y + p.height / 2;
+    return (
+      cx >= tile.x && cx <= tile.x + tile.width &&
+      cy >= tile.y && cy <= tile.y + tile.height
+    );
+  });
+}
+
+// Outline the plots that would be overtaken right now (called while dragging).
+export function markContested(list) {
+  for (const el of contestedEls) el.classList.remove('contested');
+  contestedEls = list.map((p) => p.el).filter(Boolean);
+  for (const el of contestedEls) el.classList.add('contested');
+}
+
+// Remove overtaken plots from the board and flag them inactive in the DB.
+export async function overtake(list) {
+  if (list.length === 0) return;
+  const ids = [];
+  for (const p of list) {
+    if (p.el) p.el.remove();
+    const i = plots.indexOf(p);
+    if (i !== -1) plots.splice(i, 1);
+    if (p.id != null) ids.push(p.id);
+  }
+  if (isSupabaseConfigured && ids.length) {
+    await supabase.from('plots').update({ active: false }).in('id', ids);
+  }
+}
+
+// ── Ownership / leaderboard ────────────────────────────────────────────────
+
+export function getActiveOwnedValue(ownerId) {
+  return plots.reduce((sum, p) => (p.owner_id === ownerId ? sum + (p.price_paid || 0) : sum), 0);
+}
+
+// Aggregate active plots into a ranked leaderboard (by total value held).
+export function getLeaderboard() {
+  const byOwner = new Map();
+  for (const p of plots) {
+    if (!p.owner_id) continue;
+    const e = byOwner.get(p.owner_id) || {
+      owner_id: p.owner_id, name: p.owner_name, color: p.owner_color, worth: 0, count: 0,
+    };
+    e.worth += p.price_paid || 0;
+    e.count += 1;
+    byOwner.set(p.owner_id, e);
+  }
+  return [...byOwner.values()].sort((a, b) => b.worth - a.worth || b.count - a.count);
+}
+
+// ── Persistence + realtime ─────────────────────────────────────────────────
+
 export async function uploadImage(file) {
   const ext = (file.name.split('.').pop() || 'png').toLowerCase();
   const path = crypto.randomUUID() + '.' + ext;
@@ -75,23 +146,24 @@ export async function uploadImage(file) {
 // Persist a claimed plot. Returns the saved row (or a local stand-in offline).
 export async function savePlot(plot) {
   if (!isSupabaseConfigured) {
-    // Local-only fallback: render immediately, no sharing.
     const local = { ...plot, id: 'local-' + Date.now() };
     renderPlot(local);
     return local;
   }
   const { data, error } = await supabase.from('plots').insert(plot).select().single();
   if (error) throw error;
-  renderPlot(data); // show ours right away; realtime will skip the duplicate
+  renderPlot(data); // show ours right away; realtime skips the duplicate
   return data;
 }
 
-// Load every existing plot once at startup.
+// Load every active plot in this world once at startup.
 export async function loadPlots() {
   if (!isSupabaseConfigured) return;
   const { data, error } = await supabase
     .from('plots')
     .select('*')
+    .eq('world_id', WORLD_ID)
+    .eq('active', true)
     .order('created_at', { ascending: true });
   if (error) {
     console.error('[LandGrab] Failed to load plots:', error.message);
@@ -100,18 +172,34 @@ export async function loadPlots() {
   data.forEach(renderPlot);
 }
 
-// Listen for plots added by other players and draw them live.
+// Listen for plots added (INSERT) and overtaken (UPDATE → active=false).
 export function subscribeToPlots(onChange) {
   if (!isSupabaseConfigured) return;
   supabase
     .channel('plots-realtime')
     .on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'plots' },
+      { event: 'INSERT', schema: 'public', table: 'plots', filter: `world_id=eq.${WORLD_ID}` },
       (payload) => {
         renderPlot(payload.new);
         if (onChange) onChange();
       },
     )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'plots', filter: `world_id=eq.${WORLD_ID}` },
+      (payload) => {
+        if (payload.new.active === false) removeById(payload.new.id);
+        if (onChange) onChange();
+      },
+    )
     .subscribe();
+}
+
+// Remove a plot from the board by id (used when someone overtakes it).
+function removeById(id) {
+  const i = plots.findIndex((p) => p.id === id);
+  if (i === -1) return;
+  if (plots[i].el) plots[i].el.remove();
+  plots.splice(i, 1);
 }

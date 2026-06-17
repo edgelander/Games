@@ -16,3 +16,14 @@ export const baseDisplay     = document.getElementById('base-display');
 export const sPrice           = document.getElementById('s-price');
 export const emptyHint        = document.getElementById('empty-hint');
 export const hintText          = document.getElementById('hint-text');
+
+// Phase 4: identity, wallet, leaderboard.
+export const coinDisplay   = document.getElementById('coin-display');
+export const nameDisplay   = document.getElementById('name-display');
+export const sBalance      = document.getElementById('s-balance');
+export const nickModal     = document.getElementById('nick-modal');
+export const nickInput     = document.getElementById('nick-input');
+export const nickBtn       = document.getElementById('nick-btn');
+export const lbToggle      = document.getElementById('lb-toggle');
+export const lbPanel       = document.getElementById('lb-panel');
+export const lbList        = document.getElementById('lb-list');

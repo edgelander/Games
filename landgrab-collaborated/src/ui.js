@@ -1,48 +1,76 @@
 // Small UI helpers that read state and update the screen.
 import { state } from './state.js';
-import { getBasePrice, calcPrice } from './pricing.js';
-import { getPlotCount } from './plots.js';
+import { getBasePrice, placementCost } from './pricing.js';
+import { getPlotCount, findContested, markContested } from './plots.js';
+import { getBalance, currentPlayer } from './identity.js';
 import {
-  canvas, stagingTile, buyBtn, countDisplay, baseDisplay,
-  stagingImg, stagingPdf, hintText, sPrice, successMsg,
+  canvas, stagingTile, buyBtn, countDisplay, baseDisplay, coinDisplay, nameDisplay,
+  stagingImg, stagingPdf, hintText, sPrice, sBalance, successMsg,
 } from './dom.js';
 
-// Header badge: plots sold (shared count) + current base price.
+// Header badge: plots on the board (shared count) + current base land price.
 export function updateBadge() {
   const count = getPlotCount();
   countDisplay.textContent = count;
   baseDisplay.textContent = '$' + getBasePrice(count).toFixed(2);
 }
 
-// Fraction of the canvas (0..1) the staging tile currently covers.
-export function getTileArea() {
-  return Math.min(
-    (stagingTile.offsetWidth * stagingTile.offsetHeight) /
-      (canvas.offsetWidth * canvas.offsetHeight),
-    1,
-  );
+// Header wallet chip: coin balance + nickname.
+export function updateWallet() {
+  coinDisplay.textContent = Math.round(getBalance());
+  if (currentPlayer.name) nameDisplay.textContent = currentPlayer.name;
 }
 
-// Recompute the staging-tile price and reflect it on the BUY button.
+// The staging tile's position/size as fractions of the canvas (+ coverage).
+export function getTileRectFraction() {
+  const cr = canvas.getBoundingClientRect();
+  return {
+    x: (parseFloat(stagingTile.style.left) || 0) / cr.width,
+    y: (parseFloat(stagingTile.style.top) || 0) / cr.height,
+    width: stagingTile.offsetWidth / cr.width,
+    height: stagingTile.offsetHeight / cr.height,
+    coverage: Math.min((stagingTile.offsetWidth * stagingTile.offsetHeight) /
+      (canvas.offsetWidth * canvas.offsetHeight), 1),
+  };
+}
+
+// Recompute cost (land + overtake), preview contested plots, reflect on BUY.
 export function updatePrice() {
-  state.currentPrice = calcPrice(getPlotCount(), getTileArea());
-  buyBtn.textContent = 'BUY PLOT — $' + state.currentPrice.toFixed(2);
-  buyBtn.classList.toggle('pricey', state.currentPrice >= 20);
+  if (!stagingTile.classList.contains('active')) return;
+  const rect = getTileRectFraction();
+  const contested = findContested(rect);
+  markContested(contested);
+
+  const cost = placementCost(getPlotCount(), rect.coverage, contested.map((p) => p.price_paid));
+  state.currentPrice = cost.total;
+
+  const afford = getBalance() >= cost.total;
+  buyBtn.disabled = !afford;
+  buyBtn.classList.toggle('pricey', cost.total >= 20 && afford);
+  buyBtn.classList.toggle('cant-afford', !afford);
+  buyBtn.textContent = afford ? `CLAIM — 🪙${cost.total}` : `NEED 🪙${cost.total}`;
+
+  hintText.textContent = contested.length
+    ? `Overtaking ${contested.length} plot(s): land 🪙${cost.land} + takeover 🪙${cost.overtake}`
+    : 'Drag · ⛏ to resize';
 }
 
 // Put the staging tile back to its idle, hidden state after a purchase.
 export function resetStaging() {
+  markContested([]);
   stagingTile.classList.remove('active');
   stagingImg.src = '';
   stagingImg.style.display = 'none';
   stagingPdf.style.display = 'flex';
   buyBtn.style.display = 'none';
+  buyBtn.classList.remove('cant-afford', 'pricey');
   hintText.textContent = '';
   state.currentFile = null;
 }
 
-// Show the "LAND ACQUIRED!" overlay with the price paid.
-export function showSuccess(price) {
-  sPrice.textContent = 'Cost: $' + price.toFixed(2);
+// Show the "LAND ACQUIRED!" overlay with the price paid + remaining balance.
+export function showSuccess(price, balance) {
+  sPrice.textContent = 'Cost: 🪙' + Math.round(price);
+  sBalance.textContent = 'Balance: 🪙' + Math.round(balance);
   successMsg.classList.add('visible');
 }

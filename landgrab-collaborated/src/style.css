@@ -120,3 +120,65 @@ main {
 .s-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
 #btn-another { background: var(--grass); color: var(--cream); border-color: #2e5a1c; }
 #btn-stay    { background: var(--dirt);  color: var(--muted);  border-color: var(--fence); text-shadow: none; }
+
+/* ── Phase 4: HUD (wallet + name + leaderboard toggle) ── */
+.hud { display: flex; align-items: center; gap: 6px; }
+.chip {
+  font-family: 'VT323', monospace; font-size: 1rem; line-height: 1;
+  background: var(--soil); color: var(--cream); border: 2px solid var(--fence);
+  padding: 5px 8px; white-space: nowrap; border-radius: 2px;
+}
+.chip.wallet strong { color: var(--yellow); }
+.chip.player { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; }
+.chip.player #name-display { color: var(--green2); }
+.lb-btn { cursor: pointer; font-size: 1.05rem; }
+.lb-btn:active { transform: translateY(1px); }
+
+/* ── Leaderboard panel ── */
+#lb-panel {
+  position: fixed; top: 0; right: 0; height: 100%; width: 240px; max-width: 80vw;
+  background: var(--dirt); border-left: 3px solid var(--fence); z-index: 150;
+  transform: translateX(100%); transition: transform 0.18s ease;
+  display: flex; flex-direction: column; padding: 12px 10px; gap: 8px;
+  box-shadow: -6px 0 0 rgba(0,0,0,0.4);
+  padding-top: calc(12px + env(safe-area-inset-top));
+}
+#lb-panel.open { transform: translateX(0); }
+.lb-head { font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--yellow); text-shadow: 1px 1px 0 #000; line-height: 1.6; }
+#lb-list { list-style: none; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
+#lb-list li { display: flex; align-items: center; gap: 6px; font-size: 1.05rem; padding: 4px 6px; border: 2px solid transparent; }
+#lb-list li.me { border-color: var(--yellow); background: rgba(245,200,66,0.08); }
+.lb-rank { color: var(--muted); width: 1.4em; text-align: right; }
+.lb-dot { width: 12px; height: 12px; border: 1px solid #000; flex-shrink: 0; }
+.lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cream); }
+.lb-worth { color: var(--yellow); }
+.lb-empty { color: var(--muted); }
+.badge-mini { font-size: 0.95rem; color: var(--muted); border-top: 2px solid var(--fence); padding-top: 6px; }
+.badge-mini strong { color: var(--yellow); }
+
+/* ── Owner tag + contested highlight on committed plots ── */
+.committed-plot .owner-tag {
+  position: absolute; left: 0; bottom: 0; max-width: 100%; z-index: 3;
+  font-family: 'VT323', monospace; font-size: 0.8rem; line-height: 1;
+  color: #000; background: var(--yellow); padding: 1px 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.committed-plot.contested { outline: 3px dashed var(--red); outline-offset: -3px; z-index: 4; }
+
+/* BUY button when you can't afford it */
+#buy-btn.cant-afford { background: var(--red); border-color: #7a1a10; color: var(--cream); opacity: 0.85; }
+
+/* ── Nickname modal ── */
+#nick-modal {
+  display: none; position: fixed; inset: 0; background: rgba(20,12,5,0.94);
+  z-index: 300; align-items: center; justify-content: center; padding: 20px;
+}
+#nick-modal.visible { display: flex; }
+.nick-box { display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center; max-width: 360px; width: 100%; }
+.nick-sub { font-size: 1.2rem; color: var(--muted); }
+#nick-input {
+  font-family: 'VT323', monospace; font-size: 1.4rem; width: 100%;
+  padding: 10px 12px; background: var(--cream); color: var(--soil);
+  border: 3px solid var(--yellow); box-shadow: 4px 4px 0 #000;
+}
+.s-balance { font-family: 'VT323', monospace; font-size: 1.3rem; color: var(--yellow); }

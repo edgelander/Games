@@ -1,48 +1,64 @@
-// Committing the staging tile into a permanent, shared plot on the land.
+// Committing the staging tile into a permanent, owned plot — including the
+// pay-to-overtake step that covers any plots you place on top of.
 import { state } from './state.js';
 import { isSupabaseConfigured } from './supabase.js';
-import { savePlot, uploadImage } from './plots.js';
+import { savePlot, uploadImage, findContested, overtake, getPlotCount } from './plots.js';
+import { placementCost } from './pricing.js';
+import { currentPlayer, getBalance, spend } from './identity.js';
+import { WORLD_ID } from './config.js';
 import {
-  canvas, stagingTile, stagingImg, buyBtn, successMsg, btnAnother, btnStay, fileInput,
+  stagingTile, stagingImg, buyBtn, successMsg, btnAnother, btnStay, fileInput,
 } from './dom.js';
-import { updateBadge, resetStaging, showSuccess } from './ui.js';
+import {
+  updateBadge, updateWallet, resetStaging, showSuccess, getTileRectFraction,
+} from './ui.js';
+import { renderLeaderboard } from './leaderboard.js';
 
-// Snapshot the staging tile, upload its image, and save it to the shared board.
+// Snapshot the staging tile, pay (land + overtake), and commit it to the board.
 async function buyPlot() {
   if (!stagingTile.classList.contains('active')) return;
 
-  const price = state.currentPrice;
+  const rect = getTileRectFraction();
+  const contested = findContested(rect);
+  const cost = placementCost(getPlotCount(), rect.coverage, contested.map((p) => p.price_paid));
+
+  if (getBalance() < cost.total) {
+    alert(`Not enough coins — you need 🪙${cost.total} but have 🪙${Math.round(getBalance())}.`);
+    return;
+  }
+
   buyBtn.disabled = true;
   const originalLabel = buyBtn.textContent;
   buyBtn.textContent = 'SAVING…';
 
-  // Store position/size as fractions of the canvas so it renders the same
-  // on any screen the other player is using.
-  const cr = canvas.getBoundingClientRect();
   const plot = {
-    x: (parseFloat(stagingTile.style.left) || 0) / cr.width,
-    y: (parseFloat(stagingTile.style.top) || 0) / cr.height,
-    width: stagingTile.offsetWidth / cr.width,
-    height: stagingTile.offsetHeight / cr.height,
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
     is_image: state.isImage,
     image_url: null,
-    price_paid: price,
+    price_paid: cost.total, // the plot's new value — overtaking it later costs more
+    owner_id: currentPlayer.id,
+    owner_name: currentPlayer.name,
+    owner_color: currentPlayer.color,
+    world_id: WORLD_ID,
+    active: true,
   };
 
   try {
     if (state.isImage) {
-      // Upload the real file to shared storage; fall back to the local
-      // preview when running without Supabase configured.
       plot.image_url = isSupabaseConfigured
         ? await uploadImage(state.currentFile)
         : stagingImg.src;
     }
 
-    await savePlot(plot);
+    await savePlot(plot);      // render + persist our new plot
+    await overtake(contested); // cover the plots underneath
+    const balance = await spend(cost.total);
 
     resetStaging();
-    showSuccess(price);
+    showSuccess(cost.total, balance);
     updateBadge();
+    updateWallet();
+    renderLeaderboard();
   } catch (e) {
     console.error('[LandGrab] Buy failed:', e);
     alert('Could not stake your plot: ' + (e.message || e));
@@ -56,13 +72,11 @@ async function buyPlot() {
 export function initPurchase() {
   buyBtn.addEventListener('click', buyPlot);
 
-  // "Grab another" — close overlay, open the file picker again.
   btnAnother.addEventListener('click', () => {
     successMsg.classList.remove('visible');
     fileInput.click();
   });
 
-  // "No thanks" — just close the overlay; the land stays as-is.
   btnStay.addEventListener('click', () => {
     successMsg.classList.remove('visible');
   });

@@ -15,7 +15,16 @@ This repository (`edgelander/Games`) is a **fork**. This file is the one place t
 | 0 | Scaffolded the prototype into a buildable Vite project (`landgrab-collaborated/`) | ✅ Done |
 | 1 | Installable on iPhone — PWA / Add to Home Screen (`vite-plugin-pwa`, icons, iOS meta) | ✅ Done |
 | 2 | Shared multiplayer canvas via Supabase (live board, image storage) | ✅ Done & deployed |
+| 4 | Game v1 — nicknames + ownership, coin wallet, **pay-to-overtake**, live leaderboard | ✅ Done (needs SQL migration + redeploy) |
 | 3 | Native iOS app via Capacitor → App Store | ⬜ Not started |
+
+**Phase 4 fast-follows (not built yet):** real-money/crypto coin top-ups (needs
+server-authoritative balances via a Supabase Edge Function/RPC + payment webhook), private
+friend rooms (`world_id` is already in the schema), content moderation/reporting (important
+before going viral — public image board), and an "earn income" economy.
+
+> ⚠️ Phase 4 requires re-running `landgrab-collaborated/supabase-setup.sql` (adds the
+> ownership/world/active columns + `players` table) and a redeploy.
 
 ## Auto-tracked sync status
 

@@ -42,6 +42,7 @@ function onMove(e) {
       Math.max(0, Math.min(cr.width - stagingTile.offsetWidth, tileSX + pt.x - dragSX)) + 'px';
     stagingTile.style.top =
       Math.max(0, Math.min(cr.height - stagingTile.offsetHeight, tileSY + pt.y - dragSY)) + 'px';
+    updatePrice(); // moving changes which plots you'd overtake
   }
   if (resizing) {
     const cr = canvas.getBoundingClientRect();

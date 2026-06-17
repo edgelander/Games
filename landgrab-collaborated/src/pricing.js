@@ -12,3 +12,17 @@ export function calcPrice(totalUploads, pct) {
   const b = getBasePrice(totalUploads);
   return Math.round(b * Math.pow(30 / b, pct) * 100) / 100;
 }
+
+// Total cost to place a plot: the land price for the area it covers, PLUS the
+// full current value of every plot it overtakes. So you always pay strictly
+// more than the land you're covering is worth. `contestedValues` is the list of
+// price_paid values of the plots being overtaken.
+export function placementCost(totalUploads, pct, contestedValues = []) {
+  const land = calcPrice(totalUploads, pct);
+  const overtake = contestedValues.reduce((sum, v) => sum + (Number(v) || 0), 0);
+  return {
+    land,
+    overtake: Math.round(overtake * 100) / 100,
+    total: Math.round((land + overtake) * 100) / 100,
+  };
+}

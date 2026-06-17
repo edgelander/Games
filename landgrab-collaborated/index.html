@@ -21,8 +21,19 @@
 
 <header>
   <div class="logo">LAND<span class="grab">GRAB</span></div>
-  <div class="badge">📋 <strong id="count-display">0</strong> plots sold &nbsp;·&nbsp; from <strong id="base-display">$2.00</strong></div>
+  <div class="hud">
+    <span class="chip wallet">🪙 <strong id="coin-display">0</strong></span>
+    <span class="chip player">👤 <span id="name-display">—</span></span>
+    <button class="chip lb-btn" id="lb-toggle" title="Leaderboard">🏆</button>
+  </div>
 </header>
+
+<!-- Leaderboard (slides in from the right) -->
+<aside id="lb-panel">
+  <div class="lb-head">🏆 TOP LANDLORDS</div>
+  <ol id="lb-list"></ol>
+  <div class="badge-mini">📋 <strong id="count-display">0</strong> plots &nbsp;·&nbsp; land from <strong id="base-display">$2.00</strong></div>
+</aside>
 
 <main>
   <div class="canvas" id="canvas">
@@ -54,7 +65,7 @@
   <div class="bottom-bar">
     <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,image/*,application/pdf">
     <button class="pixel-btn" id="upload-btn">🗺 CLAIM LAND</button>
-    <button class="pixel-btn" id="buy-btn">BUY PLOT — $2.00</button>
+    <button class="pixel-btn" id="buy-btn">CLAIM</button>
     <span class="hint-text" id="hint-text"></span>
   </div>
 </main>
@@ -62,11 +73,22 @@
 <div id="success-msg">
   <div style="font-size:2.5rem">🏆</div>
   <div class="s-banner">LAND ACQUIRED!</div>
-  <div class="s-price" id="s-price">Cost: $2.00</div>
+  <div class="s-price" id="s-price">Cost: 🪙0</div>
+  <div class="s-balance" id="s-balance">Balance: 🪙0</div>
   <div class="s-sub">Your plot has been staked.<br>The neighbours are furious.</div>
   <div class="s-buttons">
     <button class="pixel-btn s-btn" id="btn-another">GRAB ANOTHER PLOT</button>
     <button class="pixel-btn s-btn" id="btn-stay">NO THANKS, I'M DONE</button>
+  </div>
+</div>
+
+<!-- First-run nickname prompt -->
+<div id="nick-modal">
+  <div class="nick-box">
+    <div class="s-banner">CLAIM YOUR NAME</div>
+    <div class="nick-sub">Pick a handle. Your plots fly your colors.</div>
+    <input id="nick-input" type="text" maxlength="24" placeholder="e.g. PlotLord420" autocomplete="off">
+    <button class="pixel-btn" id="nick-btn">ENTER THE LAND</button>
   </div>
 </div>
 
