@@ -20,8 +20,12 @@ This repository (`edgelander/Games`) is a **fork**. This file is the one place t
 
 **Phase 4 fast-follows (not built yet):** real-money/crypto coin top-ups (needs
 server-authoritative balances via a Supabase Edge Function/RPC + payment webhook), private
-friend rooms (`world_id` is already in the schema), content moderation/reporting (important
-before going viral — public image board), and an "earn income" economy.
+friend rooms (`world_id` is already in the schema), and an "earn income" economy.
+
+**Content policy:** intentionally unmoderated — free speech. No editorial review or reporting
+flow is planned. The only related item kept on the table is a minimal **takedown switch**
+(remove a single plot), needed solely to comply with host requirements (Vercel / Supabase /
+Apple App Store ToS + illegal content) and keep the app online — not editorial moderation.
 
 > ⚠️ Phase 4 requires re-running `landgrab-collaborated/supabase-setup.sql` (adds the
 > ownership/world/active columns + `players` table) and a redeploy.
