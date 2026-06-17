@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths-ignore:
       - PORTING.md
+  workflow_dispatch: {} # lets you run it manually from the Actions tab
 
 permissions:
   contents: write
