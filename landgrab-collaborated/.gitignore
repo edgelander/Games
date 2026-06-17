@@ -17,3 +17,5 @@ dist/
 # Capacitor native build artifacts (added in Phase 3)
 ios/App/Pods/
 ios/App/build/
+
+.vercel
