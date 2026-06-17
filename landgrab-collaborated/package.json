@@ -1,0 +1,15 @@
+{
+  "name": "landgrab-collaborated",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "LandGrab Collaborated — a multiplayer, iOS-bound version of the LandGrab game.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.0.16"
+  }
+}

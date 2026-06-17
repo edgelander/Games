@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LandGrab Collaborated</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">LAND<span class="grab">GRAB</span></div>
+  <div class="badge">📋 <strong id="count-display">0</strong> plots sold &nbsp;·&nbsp; from <strong id="base-display">$2.00</strong></div>
+</header>
+
+<main>
+  <div class="canvas" id="canvas">
+
+    <!-- Empty state hint -->
+    <div id="empty-hint">
+      <div class="upload-icon">🗺️</div>
+      <div class="uz-title">THE LAND IS UNCLAIMED<br>BE THE FIRST TO GRAB A PLOT</div>
+      <div class="uz-sub">Tap "Claim Land" below to start</div>
+    </div>
+
+    <!-- Staging tile (draggable, before purchase) -->
+    <div id="staging-tile">
+      <div class="pdf-icon-wrap" id="staging-pdf-wrap">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="2" fill="#C0392B"/>
+          <path d="M12 14h16l8 8v12H12V14z" fill="#fff" opacity=".12"/>
+          <path d="M28 14v8h8" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M12 14h16l8 8v12H12V14z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+          <text x="24" y="30" text-anchor="middle" fill="#fff" font-size="7" font-family="Arial" font-weight="bold">PDF</text>
+        </svg>
+      </div>
+      <img id="staging-img" src="" alt=""/>
+      <div id="staging-resize">⛏</div>
+    </div>
+
+  </div>
+
+  <div class="bottom-bar">
+    <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,image/*,application/pdf">
+    <button class="pixel-btn" id="upload-btn">🗺 CLAIM LAND</button>
+    <button class="pixel-btn" id="buy-btn">BUY PLOT — $2.00</button>
+    <span class="hint-text" id="hint-text"></span>
+  </div>
+</main>
+
+<div id="success-msg">
+  <div style="font-size:2.5rem">🏆</div>
+  <div class="s-banner">LAND ACQUIRED!</div>
+  <div class="s-price" id="s-price">Cost: $2.00</div>
+  <div class="s-sub">Your plot has been staked.<br>The neighbours are furious.</div>
+  <div class="s-buttons">
+    <button class="pixel-btn s-btn" id="btn-another">GRAB ANOTHER PLOT</button>
+    <button class="pixel-btn s-btn" id="btn-stay">NO THANKS, I'M DONE</button>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

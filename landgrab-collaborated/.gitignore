@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local environment / secrets (added in Phase 2)
+.env
+.env.local
+.env.*.local
+
+# Editor / OS junk
+.DS_Store
+.vscode/
+*.log
+
+# Capacitor native build artifacts (added in Phase 3)
+ios/App/Pods/
+ios/App/build/
