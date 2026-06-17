@@ -1,16 +1,7 @@
-// Shared game state.
-//
-// `totalUploads` is persisted to localStorage (single-player baseline).
-// In Phase 2 this becomes a count read from the shared database instead.
-const STORAGE_KEY = 'lg_uploads';
-
+// Shared runtime state for the staging tile (the plot being placed).
+// The total plot count now lives in the shared board — see plots.js getPlotCount().
 export const state = {
-  totalUploads: parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10),
-  currentPrice: 2.0, // price of the staging tile at its current size
-  isImage: false,    // true = uploaded an image, false = a PDF
+  currentPrice: 2.0,   // price of the staging tile at its current size
+  isImage: false,      // true = uploaded an image, false = a PDF
+  currentFile: null,   // the actual File being placed (uploaded on buy)
 };
-
-// Save the running plot count so it survives a page reload.
-export function saveUploads() {
-  localStorage.setItem(STORAGE_KEY, String(state.totalUploads));
-}

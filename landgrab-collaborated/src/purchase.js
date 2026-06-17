@@ -1,55 +1,55 @@
-// Committing the staging tile into a permanent, locked plot on the land.
-import { state, saveUploads } from './state.js';
+// Committing the staging tile into a permanent, shared plot on the land.
+import { state } from './state.js';
+import { isSupabaseConfigured } from './supabase.js';
+import { savePlot, uploadImage } from './plots.js';
 import {
-  canvas, stagingTile, stagingImg, buyBtn, successMsg,
-  btnAnother, btnStay, fileInput,
+  canvas, stagingTile, stagingImg, buyBtn, successMsg, btnAnother, btnStay, fileInput,
 } from './dom.js';
 import { updateBadge, resetStaging, showSuccess } from './ui.js';
 
-const PDF_SVG =
-  '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-  '<rect width="48" height="48" rx="2" fill="#C0392B"/>' +
-  '<path d="M12 14h16l8 8v12H12V14z" fill="#fff" opacity=".12"/>' +
-  '<path d="M28 14v8h8" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>' +
-  '<path d="M12 14h16l8 8v12H12V14z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>' +
-  '<text x="24" y="30" text-anchor="middle" fill="#fff" font-size="7" font-family="Arial" font-weight="bold">PDF</text>' +
-  '</svg>';
-
-// Snapshot the staging tile and drop a permanent committed plot in its place.
-function buyPlot() {
+// Snapshot the staging tile, upload its image, and save it to the shared board.
+async function buyPlot() {
   if (!stagingTile.classList.contains('active')) return;
 
-  const x = parseFloat(stagingTile.style.left) || 0;
-  const y = parseFloat(stagingTile.style.top) || 0;
-  const w = stagingTile.offsetWidth;
-  const h = stagingTile.offsetHeight;
+  const price = state.currentPrice;
+  buyBtn.disabled = true;
+  const originalLabel = buyBtn.textContent;
+  buyBtn.textContent = 'SAVING…';
 
-  const plot = document.createElement('div');
-  plot.className = 'committed-plot';
-  plot.style.left = x + 'px';
-  plot.style.top = y + 'px';
-  plot.style.width = w + 'px';
-  plot.style.height = h + 'px';
+  // Store position/size as fractions of the canvas so it renders the same
+  // on any screen the other player is using.
+  const cr = canvas.getBoundingClientRect();
+  const plot = {
+    x: (parseFloat(stagingTile.style.left) || 0) / cr.width,
+    y: (parseFloat(stagingTile.style.top) || 0) / cr.height,
+    width: stagingTile.offsetWidth / cr.width,
+    height: stagingTile.offsetHeight / cr.height,
+    is_image: state.isImage,
+    image_url: null,
+    price_paid: price,
+  };
 
-  if (state.isImage && stagingImg.src) {
-    const img = document.createElement('img');
-    img.src = stagingImg.src;
-    plot.appendChild(img);
-  } else {
-    const wrap = document.createElement('div');
-    wrap.className = 'pdf-icon-wrap';
-    wrap.innerHTML = PDF_SVG;
-    plot.appendChild(wrap);
+  try {
+    if (state.isImage) {
+      // Upload the real file to shared storage; fall back to the local
+      // preview when running without Supabase configured.
+      plot.image_url = isSupabaseConfigured
+        ? await uploadImage(state.currentFile)
+        : stagingImg.src;
+    }
+
+    await savePlot(plot);
+
+    resetStaging();
+    showSuccess(price);
+    updateBadge();
+  } catch (e) {
+    console.error('[LandGrab] Buy failed:', e);
+    alert('Could not stake your plot: ' + (e.message || e));
+    buyBtn.textContent = originalLabel;
+  } finally {
+    buyBtn.disabled = false;
   }
-
-  canvas.appendChild(plot);
-
-  // Reset the staging tile and record the sale.
-  resetStaging();
-  state.totalUploads++;
-  saveUploads();
-  showSuccess(state.currentPrice);
-  updateBadge();
 }
 
 // Wire up the BUY button and the success-overlay buttons.

@@ -25,6 +25,23 @@ Then open the printed URL (usually http://localhost:5173) in your browser.
 The dev server also prints a **Network** URL — open that on your phone (same Wi-Fi)
 to test on a real device.
 
+## Shared canvas setup (Supabase)
+
+The game works locally without any setup, but plots only persist and become
+**shared between players** once you connect a free Supabase backend:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the Supabase dashboard → **SQL Editor**, paste and run the contents of
+   [`supabase-setup.sql`](./supabase-setup.sql). This creates the shared `plots`
+   table, a public image bucket, and live updates.
+3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key.
+4. Copy `.env.example` to `.env.local` and paste those two values in.
+5. Restart `npm run dev`. Uploads now save to the shared board and appear live for
+   everyone — refresh on another device to see the same canvas.
+
+> `.env.local` is git-ignored — never commit your keys. The anon key is safe in the
+> browser; the `service_role` key must never be used here.
+
 ## Other commands
 
 ```bash

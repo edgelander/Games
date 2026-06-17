@@ -11,6 +11,7 @@ import { updatePrice } from './ui.js';
 function loadFile(f) {
   emptyHint.style.display = 'none';
   state.isImage = !!(f.type && f.type.indexOf('image') === 0);
+  state.currentFile = f; // kept so we can upload it when the plot is bought
 
   const cr = canvas.getBoundingClientRect();
   const init = Math.max(cr.width * 0.12, 64);

@@ -1,0 +1,6 @@
+# Vercel CLI local link (do not commit)
+.vercel
+
+# Local environment / secrets
+.env
+.env.local

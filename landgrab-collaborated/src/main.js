@@ -5,13 +5,22 @@ import { updateBadge, updatePrice } from './ui.js';
 import { initInteractions } from './interactions.js';
 import { initUpload } from './upload.js';
 import { initPurchase } from './purchase.js';
+import { loadPlots, subscribeToPlots, relayoutPlots } from './plots.js';
 
 initInteractions();
 initUpload();
 initPurchase();
 
-// Initial render.
-updateBadge();
+// Load the shared board, then keep it live as other players claim plots.
+async function start() {
+  await loadPlots();
+  updateBadge();
+  subscribeToPlots(updateBadge);
+}
+start();
 
-// Keep the price accurate if the window is resized.
-window.addEventListener('resize', updatePrice);
+// Keep prices and committed plots positioned correctly on resize.
+window.addEventListener('resize', () => {
+  relayoutPlots();
+  updatePrice();
+});
