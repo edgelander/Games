@@ -16,19 +16,25 @@ This repository (`edgelander/Games`) is a **fork**. This file is the one place t
 | 1 | Installable on iPhone — PWA / Add to Home Screen (`vite-plugin-pwa`, icons, iOS meta) | ✅ Done |
 | 2 | Shared multiplayer canvas via Supabase (live board, image storage) | ✅ Done & deployed |
 | 4 | Game v1 — nicknames + ownership, coin wallet, **pay-to-overtake**, live leaderboard | ✅ Done (needs SQL migration + redeploy) |
+| 5 | Accounts (username + PIN login, survives reinstall) + client-side image compression | ✅ Done (needs SQL migration + one-time reset + redeploy) |
 | 3 | Native iOS app via Capacitor → App Store | ⬜ Not started |
 
-**Phase 4 fast-follows (not built yet):** real-money/crypto coin top-ups (needs
-server-authoritative balances via a Supabase Edge Function/RPC + payment webhook), private
-friend rooms (`world_id` is already in the schema), and an "earn income" economy.
+**Fast-follows (not built yet):** real-money/crypto coin top-ups — which should arrive with a
+move to **Supabase Auth** (`auth.uid()`-scoped RLS + server-authoritative balances), replacing
+the v1 client-trusted PIN/balance model; private friend rooms (`world_id` is already in the
+schema); and an "earn income" economy.
 
 **Content policy:** intentionally unmoderated — free speech. No editorial review or reporting
 flow is planned. The only related item kept on the table is a minimal **takedown switch**
 (remove a single plot), needed solely to comply with host requirements (Vercel / Supabase /
 Apple App Store ToS + illegal content) and keep the app online — not editorial moderation.
 
-> ⚠️ Phase 4 requires re-running `landgrab-collaborated/supabase-setup.sql` (adds the
-> ownership/world/active columns + `players` table) and a redeploy.
+> ⚠️ Phases 4–5 require re-running `landgrab-collaborated/supabase-setup.sql` (adds the
+> ownership/world/active columns, `players` table, pgcrypto, and the `login` RPC) and a
+> redeploy. To clear the old test board / duplicate accounts, also run
+> `landgrab-collaborated/supabase-reset.sql` **once** (it's destructive — kept separate so
+> setup stays safe to re-run). Login is **username + PIN**; images are compressed in-browser
+> before upload to conserve storage.
 
 ## Auto-tracked sync status
 

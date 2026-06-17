@@ -182,9 +182,10 @@ main {
 #nick-modal.visible { display: flex; }
 .nick-box { display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center; max-width: 360px; width: 100%; }
 .nick-sub { font-size: 1.2rem; color: var(--muted); }
-#nick-input {
+#nick-input, #nick-pin {
   font-family: 'VT323', monospace; font-size: 1.4rem; width: 100%;
   padding: 10px 12px; background: var(--cream); color: var(--soil);
   border: 3px solid var(--yellow); box-shadow: 4px 4px 0 #000;
 }
+.nick-error { font-family: 'VT323', monospace; font-size: 1.1rem; color: var(--red); min-height: 1.2em; }
 .s-balance { font-family: 'VT323', monospace; font-size: 1.3rem; color: var(--yellow); }

@@ -8,6 +8,7 @@
 import { supabase, isSupabaseConfigured } from './supabase.js';
 import { canvas, emptyHint } from './dom.js';
 import { WORLD_ID } from './config.js';
+import { compressImage } from './image.js';
 
 const PDF_SVG =
   '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -136,9 +137,11 @@ export function getLeaderboard() {
 // ── Persistence + realtime ─────────────────────────────────────────────────
 
 export async function uploadImage(file) {
-  const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+  const { blob, ext } = await compressImage(file); // shrink before upload
   const path = crypto.randomUUID() + '.' + ext;
-  const { error } = await supabase.storage.from('plots').upload(path, file);
+  const { error } = await supabase.storage
+    .from('plots')
+    .upload(path, blob, { contentType: blob.type || undefined });
   if (error) throw error;
   return supabase.storage.from('plots').getPublicUrl(path).data.publicUrl;
 }

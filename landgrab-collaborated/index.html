@@ -82,13 +82,15 @@
   </div>
 </div>
 
-<!-- First-run nickname prompt -->
+<!-- Log in / sign up (username + PIN) -->
 <div id="nick-modal">
   <div class="nick-box">
-    <div class="s-banner">CLAIM YOUR NAME</div>
-    <div class="nick-sub">Pick a handle. Your plots fly your colors.</div>
-    <input id="nick-input" type="text" maxlength="24" placeholder="e.g. PlotLord420" autocomplete="off">
+    <div class="s-banner">LOG IN / SIGN UP</div>
+    <div class="nick-sub">Pick a username + PIN. Use the same two to log back in on any device — that's how you keep your plots.</div>
+    <input id="nick-input" type="text" maxlength="24" placeholder="username" autocomplete="off" autocapitalize="off" autocorrect="off">
+    <input id="nick-pin" type="password" maxlength="32" placeholder="PIN or passphrase (4+ chars)" autocomplete="off">
     <button class="pixel-btn" id="nick-btn">ENTER THE LAND</button>
+    <div id="nick-error" class="nick-error"></div>
   </div>
 </div>
 

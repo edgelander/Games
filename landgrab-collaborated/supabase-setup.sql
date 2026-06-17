@@ -41,15 +41,53 @@ alter table public.plots add column if not exists owner_color text;
 alter table public.plots add column if not exists world_id    text not null default 'global';
 alter table public.plots add column if not exists active      boolean not null default true;
 
--- 2c. Phase 4: players (identity + coin wallet). Balances are client-trusted in
--- v1 — the real-money phase will move balance changes to a server-side RPC.
+-- 2c. Players (identity + coin wallet). Phase 5: accounts are username + PIN.
+-- The row id IS the normalized username, so names are unique by construction.
+-- The PIN is bcrypt-hashed (pgcrypto) and only ever touched via the login()
+-- function below — clients can't read it. Balances stay client-trusted in v1;
+-- the real-money phase moves to Supabase Auth + server-authoritative balances.
+create extension if not exists pgcrypto;
+
 create table if not exists public.players (
-  id         text primary key,                 -- per-device uuid
-  name       text,
+  id         text primary key,                 -- normalized username (lower/trim)
+  name       text,                              -- display name (original case)
   color      text,
   balance    numeric not null default 1000,     -- starting coins
   created_at timestamptz not null default now()
 );
+alter table public.players add column if not exists pin_hash text;
+
+-- login(): create-or-verify an account, returning the public fields (never the
+-- pin_hash). New username → account created with the given PIN; existing → PIN
+-- must match. SECURITY DEFINER so it can read/write players while clients can't.
+create or replace function public.login(p_username text, p_pin text, p_color text)
+returns table (id text, name text, color text, balance numeric)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uname text := lower(trim(p_username));
+  rec public.players;
+begin
+  if uname = '' then raise exception 'username required'; end if;
+  if length(coalesce(p_pin, '')) < 4 then raise exception 'pin too short'; end if;
+
+  select * into rec from public.players p where p.id = uname;
+
+  if rec.id is null then
+    insert into public.players (id, name, color, balance, pin_hash)
+    values (uname, trim(p_username), coalesce(p_color, '#9A8A6A'), 1000, crypt(p_pin, gen_salt('bf')))
+    returning * into rec;
+  elsif rec.pin_hash is null or rec.pin_hash <> crypt(p_pin, rec.pin_hash) then
+    raise exception 'wrong pin';
+  end if;
+
+  return query select rec.id, rec.name, rec.color, rec.balance;
+end;
+$$;
+
+grant execute on function public.login(text, text, text) to anon, authenticated;
 
 do $$
 begin
@@ -80,18 +118,17 @@ drop policy if exists "anyone can update plots" on public.plots;
 create policy "anyone can update plots"
   on public.plots for update using (true) with check (true);
 
+-- Players are locked down: no direct read/insert from clients (that would
+-- expose pin_hash and let anyone forge accounts). Account creation/verification
+-- happens only through login(). The one open door is UPDATE, used for spending
+-- coins — still client-trusted in v1 (flagged; real-money phase replaces this).
 alter table public.players enable row level security;
 
 drop policy if exists "anyone can read players" on public.players;
-create policy "anyone can read players"
-  on public.players for select using (true);
-
 drop policy if exists "anyone can add players" on public.players;
-create policy "anyone can add players"
-  on public.players for insert with check (true);
 
 drop policy if exists "anyone can update players" on public.players;
-create policy "anyone can update players"
+create policy "anyone can update player balance"
   on public.players for update using (true) with check (true);
 
 -- 4. Public storage bucket for the uploaded photos ---------------------------
