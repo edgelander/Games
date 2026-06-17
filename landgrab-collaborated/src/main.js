@@ -8,6 +8,7 @@ import { initPurchase } from './purchase.js';
 import { loadPlots, subscribeToPlots, relayoutPlots } from './plots.js';
 import { initIdentity, onBalanceChange } from './identity.js';
 import { initLeaderboard, renderLeaderboard } from './leaderboard.js';
+import './pwa.js'; // registers the service worker + auto-update polling
 
 initInteractions();
 initUpload();

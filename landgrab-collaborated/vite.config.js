@@ -11,6 +11,9 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
+      // We register the SW ourselves in src/pwa.js so we can poll for updates
+      // (long-open tabs + resumed Home-Screen apps auto-refresh, no cache clear).
+      injectRegister: false,
       includeAssets: [
         'favicon.svg',
         'favicon-32x32.png',
@@ -38,6 +41,12 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // A new SW activates immediately AND claims already-open pages, so the
+        // auto-update reload fires without the user navigating or clearing cache.
+        skipWaiting: true,
+        clientsClaim: true,
+        // Drop old precaches so stale assets can't be served after an update.
+        cleanupOutdatedCaches: true,
         // Precache the built app shell for offline launch.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         // Google Fonts: cache-first so the pixel fonts work offline after first load.

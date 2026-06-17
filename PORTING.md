@@ -143,5 +143,7 @@ git bundle create ../landgrab.bundle upstream/main..main
   - `VITE_SUPABASE_ANON_KEY` → the Supabase **Publishable** key.
 - Run **`landgrab-collaborated/supabase-setup.sql`** once in the target Supabase project to
   create the `plots` table, realtime, RLS policies, and the public `plots` storage bucket.
-- It's a **PWA**: after any deploy, fully close/reopen the Home-Screen app (or use a Private
-  tab) to clear the service-worker cache, or old code may persist.
+- It's a **PWA** with **auto-update** (`src/pwa.js`): the service worker self-activates
+  (`skipWaiting` + `clientsClaim`), polls for new versions every 60s and on app foreground,
+  and reloads to the latest build automatically — no cache clear or re-add needed. The very
+  first deploy onto a device still installs normally.
