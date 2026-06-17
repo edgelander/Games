@@ -3,7 +3,7 @@
 // in-memory board whenever plots change.
 import { getLeaderboard } from './plots.js';
 import { currentPlayer } from './identity.js';
-import { lbToggle, lbPanel, lbList } from './dom.js';
+import { lbToggle, lbClose, lbPanel, lbList } from './dom.js';
 
 export function renderLeaderboard() {
   const rows = getLeaderboard();
@@ -30,6 +30,17 @@ function escapeHtml(s) {
 }
 
 export function initLeaderboard() {
-  lbToggle.addEventListener('click', () => lbPanel.classList.toggle('open'));
+  const close = () => lbPanel.classList.remove('open');
+  lbToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lbPanel.classList.toggle('open');
+  });
+  lbClose.addEventListener('click', close);
+  // Tap anywhere outside the open panel closes it too.
+  document.addEventListener('click', (e) => {
+    if (lbPanel.classList.contains('open') && !lbPanel.contains(e.target) && e.target !== lbToggle) {
+      close();
+    }
+  });
   renderLeaderboard();
 }

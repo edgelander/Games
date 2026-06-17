@@ -25,5 +25,6 @@ export const nickModal     = document.getElementById('nick-modal');
 export const nickInput     = document.getElementById('nick-input');
 export const nickBtn       = document.getElementById('nick-btn');
 export const lbToggle      = document.getElementById('lb-toggle');
+export const lbClose       = document.getElementById('lb-close');
 export const lbPanel       = document.getElementById('lb-panel');
 export const lbList        = document.getElementById('lb-list');
