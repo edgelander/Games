@@ -1,0 +1,44 @@
+name: Update PORTING.md
+
+# Refresh the auto-tracked block in PORTING.md on every push to main.
+# paths-ignore stops the bot's own commit (which only touches PORTING.md) from
+# re-triggering this workflow; pushes made with GITHUB_TOKEN don't recurse either.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - PORTING.md
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-porting-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so we can diff against upstream
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Regenerate porting summary
+        run: node scripts/update-porting.mjs
+
+      - name: Commit if changed
+        run: |
+          if [[ -n "$(git status --porcelain PORTING.md)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add PORTING.md
+            git commit -m "docs: refresh PORTING.md [skip ci]"
+            git push origin HEAD:main
+          else
+            echo "PORTING.md already up to date."
+          fi
