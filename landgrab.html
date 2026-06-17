@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LandGrab</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --dirt:  #3B2A1A; --soil: #2A1E10; --grass: #4A7C2F; --green2: #5C9E3A;
+    --yellow: #F5C842; --red: #C0392B; --cream: #F2E8C9; --muted: #9A8A6A; --fence: #6B4F2A;
+  }
+  html, body { height: 100%; background: var(--soil); color: var(--cream); font-family: 'VT323', monospace; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 12px; background: var(--dirt); border-bottom: 3px solid var(--fence);
+    flex-shrink: 0; gap: 8px;
+  }
+  .logo { font-family: 'Press Start 2P', monospace; font-size: 0.72rem; color: var(--yellow); text-shadow: 2px 2px 0 #7a5a00, -1px -1px 0 #000; line-height: 1; }
+  .logo .grab { color: var(--green2); }
+  .badge { font-family: 'VT323', monospace; font-size: 1rem; color: var(--muted); white-space: nowrap; }
+  .badge strong { color: var(--yellow); }
+
+  main { flex: 1; display: flex; flex-direction: column; padding: 6px; gap: 6px; min-height: 0; }
+
+  /* ── The land — always visible ── */
+  .canvas {
+    flex: 1; min-height: 0; position: relative; overflow: hidden; touch-action: none;
+    background:
+      repeating-linear-gradient(0deg, rgba(74,124,47,0.07) 0px, rgba(74,124,47,0.07) 1px, transparent 1px, transparent 32px),
+      repeating-linear-gradient(90deg, rgba(74,124,47,0.07) 0px, rgba(74,124,47,0.07) 1px, transparent 1px, transparent 32px),
+      var(--dirt);
+    border: 3px solid var(--fence);
+  }
+  .canvas::before, .canvas::after { content: '🌲'; position: absolute; font-size: 1.1rem; top: 4px; pointer-events: none; line-height: 1; z-index: 0; }
+  .canvas::before { left: 6px; }
+  .canvas::after  { right: 6px; }
+
+  /* Empty state hint */
+  #empty-hint {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; pointer-events: none; z-index: 1;
+  }
+  #empty-hint .uz-title { font-family: 'Press Start 2P', monospace; font-size: 0.62rem; color: var(--yellow); text-shadow: 1px 1px 0 #000; text-align: center; line-height: 1.8; }
+  #empty-hint .uz-sub { font-size: 1.1rem; color: var(--muted); text-align: center; }
+  #empty-hint .upload-icon { font-size: 2.2rem; filter: drop-shadow(2px 2px 0 #000); }
+
+  /* ── Committed plots (locked, permanent) ── */
+  .committed-plot {
+    position: absolute;
+    border: 3px solid var(--fence);
+    box-shadow: 4px 4px 0 #000;
+    overflow: hidden;
+    pointer-events: none; /* locked — can't move */
+    z-index: 2;
+  }
+  .committed-plot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--cream); }
+  .committed-plot .pdf-icon-wrap {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--cream);
+  }
+  .committed-plot .pdf-icon-wrap svg { width: 40%; max-width: 44px; min-width: 18px; }
+
+  /* ── Staging tile (active, draggable) ── */
+  #staging-tile {
+    display: none;
+    position: absolute;
+    background: var(--cream);
+    border: 3px solid var(--yellow);
+    box-shadow: 4px 4px 0 #000, 0 0 0 2px rgba(245,200,66,0.4);
+    cursor: move;
+    overflow: hidden;
+    min-width: 48px; min-height: 48px;
+    user-select: none;
+    z-index: 10;
+  }
+  #staging-tile.active { display: block; }
+  #staging-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--cream); display: none; }
+  #staging-tile .pdf-icon-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #staging-tile .pdf-icon-wrap svg { width: 40%; max-width: 44px; min-width: 18px; }
+  #staging-resize {
+    position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; cursor: se-resize;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--fence); font-size: 0.75rem; line-height: 1; z-index: 11;
+  }
+
+  /* ── Bottom bar ── */
+  .bottom-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+
+  /* Hidden file input trigger */
+  #file-input { display: none; }
+
+  .pixel-btn {
+    font-family: 'Press Start 2P', monospace; font-size: 0.55rem; padding: 8px 14px;
+    cursor: pointer; white-space: nowrap; line-height: 1.5;
+    transition: transform 0.08s, box-shadow 0.08s; border: 3px solid;
+    box-shadow: 3px 3px 0 #000; text-shadow: 1px 1px 0 #000;
+  }
+  .pixel-btn:hover  { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #000; }
+  .pixel-btn:active { transform: translate(2px,2px);   box-shadow: 1px 1px 0 #000; }
+
+  #upload-btn { background: var(--dirt); color: var(--muted); border-color: var(--fence); text-shadow: none; }
+  #buy-btn    { background: var(--grass); color: var(--cream); border-color: #2e5a1c; display: none; }
+  #buy-btn.pricey { background: var(--red); border-color: #7a1a10; }
+  .hint-text { font-size: 0.9rem; color: var(--muted); }
+
+  /* ── Success overlay ── */
+  #success-msg {
+    display: none; position: fixed; inset: 0; background: rgba(20,12,5,0.9);
+    z-index: 200; align-items: center; justify-content: center;
+    flex-direction: column; gap: 14px; text-align: center; padding: 20px;
+  }
+  #success-msg.visible { display: flex; }
+  .s-banner { font-family: 'Press Start 2P', monospace; font-size: clamp(0.55rem, 2.5vw, 0.9rem); color: var(--yellow); text-shadow: 2px 2px 0 #7a5a00, -1px -1px 0 #000; line-height: 2; }
+  .s-price  { font-family: 'VT323', monospace; font-size: 1.6rem; color: var(--green2); }
+  .s-sub    { font-family: 'VT323', monospace; font-size: 1.3rem; color: var(--muted); }
+  .s-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+  #btn-another { background: var(--grass); color: var(--cream); border-color: #2e5a1c; }
+  #btn-stay    { background: var(--dirt);  color: var(--muted);  border-color: var(--fence); text-shadow: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LAND<span class="grab">GRAB</span></div>
+  <div class="badge">📋 <strong id="count-display">0</strong> plots sold &nbsp;·&nbsp; from <strong id="base-display">$2.00</strong></div>
+</header>
+
+<main>
+  <div class="canvas" id="canvas">
+
+    <!-- Empty state hint -->
+    <div id="empty-hint">
+      <div class="upload-icon">🗺️</div>
+      <div class="uz-title">THE LAND IS UNCLAIMED<br>BE THE FIRST TO GRAB A PLOT</div>
+      <div class="uz-sub">Tap "Claim Land" below to start</div>
+    </div>
+
+    <!-- Staging tile (draggable, before purchase) -->
+    <div id="staging-tile">
+      <div class="pdf-icon-wrap" id="staging-pdf-wrap">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="2" fill="#C0392B"/>
+          <path d="M12 14h16l8 8v12H12V14z" fill="#fff" opacity=".12"/>
+          <path d="M28 14v8h8" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M12 14h16l8 8v12H12V14z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+          <text x="24" y="30" text-anchor="middle" fill="#fff" font-size="7" font-family="Arial" font-weight="bold">PDF</text>
+        </svg>
+      </div>
+      <img id="staging-img" src="" alt=""/>
+      <div id="staging-resize">⛏</div>
+    </div>
+
+  </div>
+
+  <div class="bottom-bar">
+    <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,image/*,application/pdf">
+    <button class="pixel-btn" id="upload-btn" onclick="document.getElementById('file-input').click()">🗺 CLAIM LAND</button>
+    <button class="pixel-btn" id="buy-btn">BUY PLOT — $2.00</button>
+    <span class="hint-text" id="hint-text"></span>
+  </div>
+</main>
+
+<div id="success-msg">
+  <div style="font-size:2.5rem">🏆</div>
+  <div class="s-banner">LAND ACQUIRED!</div>
+  <div class="s-price" id="s-price">Cost: $2.00</div>
+  <div class="s-sub">Your plot has been staked.<br>The neighbours are furious.</div>
+  <div class="s-buttons">
+    <button class="pixel-btn s-btn" id="btn-another">GRAB ANOTHER PLOT</button>
+    <button class="pixel-btn s-btn" id="btn-stay">NO THANKS, I'M DONE</button>
+  </div>
+</div>
+
+<script>
+  var totalUploads = parseInt(localStorage.getItem('lg_uploads') || '0');
+  var currentPrice = 2.00;
+  var isImage = false;
+  var dragging = false, dragSX, dragSY, tileSX, tileSY;
+  var resizing = false, resSX, resSY, resSW, resSH;
+
+  var canvas      = document.getElementById('canvas');
+  var fileInput   = document.getElementById('file-input');
+  var stagingTile = document.getElementById('staging-tile');
+  var stagingImg  = document.getElementById('staging-img');
+  var stagingPdf  = document.getElementById('staging-pdf-wrap');
+  var stagingRes  = document.getElementById('staging-resize');
+  var buyBtn      = document.getElementById('buy-btn');
+  var successMsg  = document.getElementById('success-msg');
+  var btnAnother  = document.getElementById('btn-another');
+  var btnStay     = document.getElementById('btn-stay');
+  var countDisplay= document.getElementById('count-display');
+  var baseDisplay = document.getElementById('base-display');
+  var sPrice      = document.getElementById('s-price');
+  var emptyHint   = document.getElementById('empty-hint');
+  var hintText    = document.getElementById('hint-text');
+
+  function getBasePrice() { return 2.00 + Math.floor(totalUploads / 500) * 0.10; }
+  function calcPrice(pct) { var b = getBasePrice(); return Math.round(b * Math.pow(30 / b, pct) * 100) / 100; }
+  function updateBadge() {
+    countDisplay.textContent = totalUploads;
+    baseDisplay.textContent  = '$' + getBasePrice().toFixed(2);
+  }
+  updateBadge();
+
+  function getTileArea() {
+    return Math.min((stagingTile.offsetWidth * stagingTile.offsetHeight) / (canvas.offsetWidth * canvas.offsetHeight), 1);
+  }
+  function updatePrice() {
+    currentPrice = calcPrice(getTileArea());
+    buyBtn.textContent = 'BUY PLOT — $' + currentPrice.toFixed(2);
+    buyBtn.classList.toggle('pricey', currentPrice >= 20);
+  }
+
+  // ── File input ──
+  fileInput.addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  // ── Drag & drop onto canvas ──
+  canvas.addEventListener('dragover', function(e) { e.preventDefault(); });
+  canvas.addEventListener('drop', function(e) {
+    e.preventDefault();
+    var f = e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+
+  function loadFile(f) {
+    emptyHint.style.display = 'none';
+    isImage = f.type && f.type.indexOf('image') === 0;
+
+    var cr = canvas.getBoundingClientRect();
+    var init = Math.max(cr.width * 0.12, 64);
+
+    // Position staging tile in center
+    stagingTile.style.width  = init + 'px';
+    stagingTile.style.height = init + 'px';
+    stagingTile.style.left   = Math.round((cr.width  - init) / 2) + 'px';
+    stagingTile.style.top    = Math.round((cr.height - init) / 2) + 'px';
+    stagingTile.style.transform = 'none';
+
+    if (isImage) {
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        stagingImg.src = ev.target.result;
+        stagingImg.style.display = 'block';
+        stagingPdf.style.display = 'none';
+      };
+      reader.readAsDataURL(f);
+    } else {
+      stagingImg.style.display = 'none';
+      stagingImg.src = '';
+      stagingPdf.style.display = 'flex';
+    }
+
+    stagingTile.classList.add('active');
+    buyBtn.style.display = 'inline-block';
+    hintText.textContent = 'Drag · ⛏ to resize';
+    updatePrice();
+    fileInput.value = '';
+  }
+
+  // ── Drag staging tile ──
+  stagingTile.addEventListener('mousedown', startDrag);
+  stagingTile.addEventListener('touchstart', startDrag, { passive: false });
+  function startDrag(e) {
+    if (stagingRes.contains(e.target)) return;
+    e.preventDefault(); dragging = true;
+    var pt = gp(e), cr = canvas.getBoundingClientRect();
+    dragSX = pt.x; dragSY = pt.y;
+    tileSX = parseFloat(stagingTile.style.left) || 0;
+    tileSY = parseFloat(stagingTile.style.top)  || 0;
+  }
+
+  // ── Resize staging tile ──
+  stagingRes.addEventListener('mousedown', startResize);
+  stagingRes.addEventListener('touchstart', startResize, { passive: false });
+  function startResize(e) {
+    e.stopPropagation(); e.preventDefault(); resizing = true;
+    var pt = gp(e);
+    resSX = pt.x; resSY = pt.y;
+    resSW = stagingTile.offsetWidth; resSH = stagingTile.offsetHeight;
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  function onMove(e) {
+    if (!dragging && !resizing) return;
+    e.preventDefault();
+    var pt = gp(e);
+    if (dragging) {
+      var cr = canvas.getBoundingClientRect();
+      stagingTile.style.left = Math.max(0, Math.min(cr.width  - stagingTile.offsetWidth,  tileSX + pt.x - dragSX)) + 'px';
+      stagingTile.style.top  = Math.max(0, Math.min(cr.height - stagingTile.offsetHeight, tileSY + pt.y - dragSY)) + 'px';
+    }
+    if (resizing) {
+      var cr = canvas.getBoundingClientRect(), tl = stagingTile.getBoundingClientRect();
+      stagingTile.style.width  = Math.min(cr.right  - tl.left, Math.max(48, resSW + pt.x - resSX)) + 'px';
+      stagingTile.style.height = Math.min(cr.bottom - tl.top,  Math.max(48, resSH + pt.y - resSY)) + 'px';
+      updatePrice();
+    }
+  }
+  document.addEventListener('mouseup',  function() { dragging = resizing = false; });
+  document.addEventListener('touchend', function() { dragging = resizing = false; });
+
+  function gp(e) {
+    return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY };
+  }
+
+  // ── Buy: commit staging tile as permanent plot ──
+  buyBtn.addEventListener('click', function() {
+    if (!stagingTile.classList.contains('active')) return;
+
+    // Snapshot position & size
+    var x = parseFloat(stagingTile.style.left) || 0;
+    var y = parseFloat(stagingTile.style.top)  || 0;
+    var w = stagingTile.offsetWidth;
+    var h = stagingTile.offsetHeight;
+
+    // Create permanent plot div
+    var plot = document.createElement('div');
+    plot.className = 'committed-plot';
+    plot.style.left   = x + 'px';
+    plot.style.top    = y + 'px';
+    plot.style.width  = w + 'px';
+    plot.style.height = h + 'px';
+
+    if (isImage && stagingImg.src) {
+      var img = document.createElement('img');
+      img.src = stagingImg.src;
+      plot.appendChild(img);
+    } else {
+      var wrap = document.createElement('div');
+      wrap.className = 'pdf-icon-wrap';
+      wrap.innerHTML = '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="2" fill="#C0392B"/><path d="M12 14h16l8 8v12H12V14z" fill="#fff" opacity=".12"/><path d="M28 14v8h8" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 14h16l8 8v12H12V14z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><text x="24" y="30" text-anchor="middle" fill="#fff" font-size="7" font-family="Arial" font-weight="bold">PDF</text></svg>';
+      plot.appendChild(wrap);
+    }
+
+    canvas.appendChild(plot);
+
+    // Hide staging tile
+    stagingTile.classList.remove('active');
+    stagingImg.src = '';
+    stagingImg.style.display = 'none';
+    stagingPdf.style.display = 'flex';
+    buyBtn.style.display = 'none';
+    hintText.textContent = '';
+
+    // Record & show success
+    totalUploads++;
+    localStorage.setItem('lg_uploads', totalUploads);
+    sPrice.textContent = 'Cost: $' + currentPrice.toFixed(2);
+    successMsg.classList.add('visible');
+    updateBadge();
+  });
+
+  // "Grab another" — close overlay, open file picker
+  btnAnother.addEventListener('click', function() {
+    successMsg.classList.remove('visible');
+    fileInput.click();
+  });
+
+  // "No thanks" — just close overlay, land stays as-is
+  btnStay.addEventListener('click', function() {
+    successMsg.classList.remove('visible');
+  });
+
+  window.addEventListener('resize', function() {
+    updatePrice();
+  });
+</script>
+</body>
+</html>
