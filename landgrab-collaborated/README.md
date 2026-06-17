@@ -67,9 +67,18 @@ landgrab-collaborated/
 │  └─ purchase.js      # buying/committing a plot
 ```
 
+## Install on iPhone
+
+The game is a **PWA**, so you can add it to your Home Screen and it runs full-screen
+like a real app (and the screen loads even with no signal):
+
+1. Open the deployed site in **Safari** (Add to Home Screen only works in Safari, not Chrome).
+2. Tap the **Share** button → **Add to Home Screen** → **Add**.
+3. Launch it from the new "LandGrab" icon — no browser bars, just the game.
+
 ## Roadmap
 
 - **Phase 0 (done):** Ported the prototype into this buildable project.
-- **Phase 1:** Make it installable on iPhone (PWA / Add to Home Screen).
-- **Phase 2:** Shared multiplayer canvas (Supabase: database + storage + realtime).
+- **Phase 1 (done):** Installable on iPhone (PWA / Add to Home Screen) via `vite-plugin-pwa`.
+- **Phase 2 (done):** Shared multiplayer canvas (Supabase: database + storage + realtime).
 - **Phase 3:** Native iOS app via Capacitor → App Store.

@@ -8,7 +8,11 @@ body { display: flex; flex-direction: column; }
 
 header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 5px 12px; background: var(--dirt); border-bottom: 3px solid var(--fence);
+  /* Safe-area insets keep the header clear of the iPhone notch/status bar
+     when launched full-screen from the Home Screen (PWA standalone). */
+  padding: calc(5px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
+           5px calc(12px + env(safe-area-inset-left));
+  background: var(--dirt); border-bottom: 3px solid var(--fence);
   flex-shrink: 0; gap: 8px;
 }
 .logo { font-family: 'Press Start 2P', monospace; font-size: 0.72rem; color: var(--yellow); text-shadow: 2px 2px 0 #7a5a00, -1px -1px 0 #000; line-height: 1; }
@@ -16,7 +20,12 @@ header {
 .badge { font-family: 'VT323', monospace; font-size: 1rem; color: var(--muted); white-space: nowrap; }
 .badge strong { color: var(--yellow); }
 
-main { flex: 1; display: flex; flex-direction: column; padding: 6px; gap: 6px; min-height: 0; }
+main {
+  flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 0;
+  /* Bottom inset keeps the buy/claim bar above the iPhone home indicator. */
+  padding: 6px calc(6px + env(safe-area-inset-right))
+           calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left));
+}
 
 /* ── The land — always visible ── */
 .canvas {

@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- LandGrab app icon: a claimed, fenced plot of land with a flag.
+       Full-bleed dirt background; key content kept within the central
+       safe zone so it survives maskable cropping on Android. -->
+  <defs>
+    <clipPath id="round"><rect width="512" height="512" rx="0"/></clipPath>
+  </defs>
+  <g clip-path="url(#round)">
+    <!-- Dirt background -->
+    <rect width="512" height="512" fill="#3B2A1A"/>
+    <!-- Faint grid (the unclaimed land) -->
+    <g stroke="#4A7C2F" stroke-opacity="0.10" stroke-width="2">
+      <path d="M0 64 H512 M0 128 H512 M0 192 H512 M0 256 H512 M0 320 H512 M0 384 H512 M0 448 H512"/>
+      <path d="M64 0 V512 M128 0 V512 M192 0 V512 M256 0 V512 M320 0 V512 M384 0 V512 M448 0 V512"/>
+    </g>
+
+    <!-- The claimed plot: green field with a heavy fence border + pixel shadow -->
+    <rect x="132" y="156" width="248" height="248" fill="#000000" opacity="0.35"/>
+    <rect x="124" y="148" width="248" height="248" fill="#4A7C2F" stroke="#6B4F2A" stroke-width="14"/>
+    <!-- subtle inner grass rows -->
+    <g stroke="#5C9E3A" stroke-width="3" stroke-opacity="0.55">
+      <path d="M124 210 H372 M124 272 H372 M124 334 H372"/>
+    </g>
+
+    <!-- Flag staked in the plot -->
+    <rect x="240" y="118" width="12" height="170" fill="#2A1E10"/>
+    <path d="M252 124 L344 150 L252 176 Z" fill="#F5C842" stroke="#7a5a00" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>
