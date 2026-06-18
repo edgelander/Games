@@ -148,7 +148,8 @@ alter table public.players enable row level security;
 drop policy if exists "anyone can read players" on public.players;
 drop policy if exists "anyone can add players" on public.players;
 
-drop policy if exists "anyone can update players" on public.players;
+drop policy if exists "anyone can update players" on public.players;        -- legacy name (no-op now)
+drop policy if exists "anyone can update player balance" on public.players; -- actual name → makes re-run safe
 create policy "anyone can update player balance"
   on public.players for update using (true) with check (true);
 
