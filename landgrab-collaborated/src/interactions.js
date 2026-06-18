@@ -1,6 +1,7 @@
 // Dragging and resizing the staging tile (mouse + touch).
 import { stagingTile, stagingRes, canvas } from './dom.js';
 import { updatePrice } from './ui.js';
+import { state } from './state.js';
 
 let dragging = false, dragSX, dragSY, tileSX, tileSY;
 let resizing = false, resSX, resSY, resSW, resSH;
@@ -47,10 +48,17 @@ function onMove(e) {
   if (resizing) {
     const cr = canvas.getBoundingClientRect();
     const tl = stagingTile.getBoundingClientRect();
-    stagingTile.style.width =
-      Math.min(cr.right - tl.left, Math.max(48, resSW + pt.x - resSX)) + 'px';
-    stagingTile.style.height =
-      Math.min(cr.bottom - tl.top, Math.max(48, resSH + pt.y - resSY)) + 'px';
+    const ar = state.aspectRatio || 1;
+    // Resize from the drag handle but keep the photo's proportions: derive
+    // height from width, then clamp both to the canvas bounds.
+    let w = Math.max(48, resSW + pt.x - resSX);
+    w = Math.min(w, cr.right - tl.left);
+    let h = w / ar;
+    const maxH = cr.bottom - tl.top;
+    if (h > maxH) { h = maxH; w = h * ar; }
+    if (h < 48) { h = 48; w = h * ar; }
+    stagingTile.style.width = w + 'px';
+    stagingTile.style.height = h + 'px';
     updatePrice();
   }
 }
