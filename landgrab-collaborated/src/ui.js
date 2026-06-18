@@ -46,7 +46,7 @@ export function updatePrice() {
 
   const afford = getBalance() >= cost.total;
   buyBtn.disabled = !afford;
-  buyBtn.classList.toggle('pricey', cost.total >= 200 && afford);
+  buyBtn.classList.toggle('pricey', cost.total >= 500 && afford);
   buyBtn.classList.toggle('cant-afford', !afford);
   buyBtn.textContent = afford ? `CLAIM — 🪙${cost.total}` : `NEED 🪙${cost.total}`;
 
