@@ -79,16 +79,15 @@ export function relayoutPlots() {
 
 // ── Pay-to-overtake helpers ────────────────────────────────────────────────
 
-// Active plots whose CENTER falls inside the given tile (fractions of canvas).
+// Active plots FULLY covered by the given tile (fractions of canvas) — a plot is
+// only overtaken once the new tile completely contains it, so partially covered
+// photos stay on the board until they're entirely buried.
 export function findContested(tile) {
-  return plots.filter((p) => {
-    const cx = p.x + p.width / 2;
-    const cy = p.y + p.height / 2;
-    return (
-      cx >= tile.x && cx <= tile.x + tile.width &&
-      cy >= tile.y && cy <= tile.y + tile.height
-    );
-  });
+  return plots.filter((p) =>
+    p.x >= tile.x && p.y >= tile.y &&
+    p.x + p.width <= tile.x + tile.width &&
+    p.y + p.height <= tile.y + tile.height,
+  );
 }
 
 // Outline the plots that would be overtaken right now (called while dragging).
@@ -176,7 +175,9 @@ export async function loadPlots() {
 }
 
 // Listen for plots added (INSERT) and overtaken (UPDATE → active=false).
-export function subscribeToPlots(onChange) {
+// `onOvertaken(row)` fires with the full overtaken row so callers can tell when
+// it was THEIR plot (row.owner_id) and what it paid out (row.price_paid).
+export function subscribeToPlots(onChange, onOvertaken) {
   if (!isSupabaseConfigured) return;
   supabase
     .channel('plots-realtime')
@@ -192,7 +193,10 @@ export function subscribeToPlots(onChange) {
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'plots', filter: `world_id=eq.${WORLD_ID}` },
       (payload) => {
-        if (payload.new.active === false) removeById(payload.new.id);
+        if (payload.new.active === false) {
+          removeById(payload.new.id);
+          if (onOvertaken) onOvertaken(payload.new);
+        }
         if (onChange) onChange();
       },
     )

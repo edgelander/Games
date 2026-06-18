@@ -1,12 +1,12 @@
 // LandGrab Collaborated — entry point.
 // Wires the modules together and renders the initial state.
 // (style.css is loaded via the <link> tag in index.html.)
-import { updateBadge, updateWallet, updatePrice } from './ui.js';
+import { updateBadge, updateWallet, updatePrice, showToast } from './ui.js';
 import { initInteractions } from './interactions.js';
 import { initUpload } from './upload.js';
 import { initPurchase } from './purchase.js';
 import { loadPlots, subscribeToPlots, relayoutPlots } from './plots.js';
-import { initIdentity, onBalanceChange } from './identity.js';
+import { initIdentity, onBalanceChange, currentPlayer, applyCredit } from './identity.js';
 import { initLeaderboard, renderLeaderboard } from './leaderboard.js';
 import './pwa.js'; // registers the service worker + auto-update polling
 
@@ -25,10 +25,22 @@ async function start() {
   await loadPlots();
   updateBadge();
   initLeaderboard();
-  subscribeToPlots(() => {
-    updateBadge();
-    renderLeaderboard();
-  });
+  subscribeToPlots(
+    () => {
+      updateBadge();
+      renderLeaderboard();
+    },
+    // When one of OUR plots is grabbed, the buyer's payout already credited us
+    // server-side — mirror it locally and celebrate the income.
+    (row) => {
+      if (row.owner_id !== currentPlayer.id) return;
+      const paid = Number(row.price_paid) || 0;
+      if (paid <= 0) return;
+      applyCredit(paid);
+      updateWallet();
+      showToast(`🪙 Someone grabbed your land — you earned 🪙${Math.round(paid)}!`);
+    },
+  );
 }
 start();
 

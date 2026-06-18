@@ -46,6 +46,9 @@ alter table public.plots add column if not exists active      boolean not null d
 -- The PIN is bcrypt-hashed (pgcrypto) and only ever touched via the login()
 -- function below — clients can't read it. Balances stay client-trusted in v1;
 -- the real-money phase moves to Supabase Auth + server-authoritative balances.
+-- Supabase installs pgcrypto into the `extensions` schema (not public), so the
+-- login() function's search_path below must include it or crypt()/gen_salt()
+-- resolve to "function does not exist".
 create extension if not exists pgcrypto;
 
 create table if not exists public.players (
@@ -64,7 +67,7 @@ create or replace function public.login(p_username text, p_pin text, p_color tex
 returns table (id text, name text, color text, balance numeric)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   uname text := lower(trim(p_username));
@@ -88,6 +91,24 @@ end;
 $$;
 
 grant execute on function public.login(text, text, text) to anon, authenticated;
+
+-- credit_balance(): add coins to a player's wallet atomically. Used to pay the
+-- overtaken owner when their plot is grabbed (the buyer's overtake payment flows
+-- to the victim instead of evaporating). The single `balance = balance + amount`
+-- UPDATE is race-free, and is strictly safer than the open UPDATE policy below
+-- since callers can only ever *add* a positive amount. SECURITY DEFINER so the
+-- RLS-locked players table can still be credited. Balances remain client-trusted
+-- in v1 — the real-money phase moves to Supabase Auth + server-authoritative math.
+create or replace function public.credit_balance(p_id text, p_amount numeric)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.players set balance = balance + p_amount where id = p_id and p_amount > 0;
+$$;
+
+grant execute on function public.credit_balance(text, numeric) to anon, authenticated;
 
 do $$
 begin
@@ -127,7 +148,8 @@ alter table public.players enable row level security;
 drop policy if exists "anyone can read players" on public.players;
 drop policy if exists "anyone can add players" on public.players;
 
-drop policy if exists "anyone can update players" on public.players;
+drop policy if exists "anyone can update players" on public.players;        -- legacy name (no-op now)
+drop policy if exists "anyone can update player balance" on public.players; -- actual name → makes re-run safe
 create policy "anyone can update player balance"
   on public.players for update using (true) with check (true);
 

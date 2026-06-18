@@ -5,7 +5,7 @@ import { getPlotCount, findContested, markContested } from './plots.js';
 import { getBalance, currentPlayer } from './identity.js';
 import {
   canvas, stagingTile, buyBtn, countDisplay, baseDisplay, coinDisplay, nameDisplay,
-  stagingImg, stagingPdf, hintText, sPrice, sBalance, successMsg,
+  stagingImg, stagingPdf, hintText, sPrice, sBalance, successMsg, toast,
 } from './dom.js';
 
 // Header badge: plots on the board (shared count) + current base land price.
@@ -66,6 +66,17 @@ export function resetStaging() {
   buyBtn.classList.remove('cant-afford', 'pricey');
   hintText.textContent = '';
   state.currentFile = null;
+}
+
+// Brief, non-blocking notice (auto-fades). Used for live economy events like
+// getting paid when your land is grabbed.
+let toastTimer;
+export function showToast(msg) {
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 4500);
 }
 
 // Show the "LAND ACQUIRED!" overlay with the price paid + remaining balance.
