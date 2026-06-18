@@ -9,6 +9,7 @@ import { supabase, isSupabaseConfigured } from './supabase.js';
 import { canvas, emptyHint } from './dom.js';
 import { WORLD_ID, textColorFor } from './config.js';
 import { compressImage } from './image.js';
+import { clearForestUnder } from './forest.js';
 
 const PDF_SVG =
   '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -78,6 +79,9 @@ export function renderPlot(plot) {
   plot.el = el;
   plots.push(plot);
   emptyHint.style.display = 'none';
+
+  // Clear (bulldoze) the forest under this plot's footprint.
+  clearForestUnder({ x: plot.x, y: plot.y, width: plot.width, height: plot.height });
 }
 
 export function relayoutPlots() {
