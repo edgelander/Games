@@ -46,6 +46,9 @@ alter table public.plots add column if not exists active      boolean not null d
 -- The PIN is bcrypt-hashed (pgcrypto) and only ever touched via the login()
 -- function below — clients can't read it. Balances stay client-trusted in v1;
 -- the real-money phase moves to Supabase Auth + server-authoritative balances.
+-- Supabase installs pgcrypto into the `extensions` schema (not public), so the
+-- login() function's search_path below must include it or crypt()/gen_salt()
+-- resolve to "function does not exist".
 create extension if not exists pgcrypto;
 
 create table if not exists public.players (
@@ -64,7 +67,7 @@ create or replace function public.login(p_username text, p_pin text, p_color tex
 returns table (id text, name text, color text, balance numeric)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   uname text := lower(trim(p_username));
