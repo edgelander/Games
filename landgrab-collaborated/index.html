@@ -16,6 +16,43 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/src/style.css">
+
+<!-- Self-heal: this inline script is NOT part of the hashed JS bundle, so it
+     always runs even if the bundle fails to load. If the app shell can't boot —
+     e.g. a stale service-worker cache points at a JS chunk a new deploy removed
+     (404), which would otherwise leave a dead page with no way to update itself —
+     unregister the service worker, clear caches, and reload ONCE to recover. -->
+<script>
+  (function () {
+    window.__lgBooted = false;
+    var done = false;
+    async function recover(reason) {
+      if (done || sessionStorage.getItem('lg-recovered')) return; // once per tab session
+      done = true;
+      sessionStorage.setItem('lg-recovered', reason || '1');
+      try {
+        if (navigator.serviceWorker) {
+          var regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }
+        if (window.caches) {
+          var keys = await caches.keys();
+          await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }
+      } catch (e) { /* ignore */ }
+      location.reload();
+    }
+    // A bundle chunk failed to load (e.g. stale-cache 404).
+    window.addEventListener('error', function (e) {
+      var el = e && e.target;
+      if (el && el.tagName === 'SCRIPT' && el.src && el.src.indexOf('/assets/') !== -1) {
+        recover('chunk-404');
+      }
+    }, true);
+    // Or it loaded but never booted within a reasonable window.
+    setTimeout(function () { if (!window.__lgBooted) recover('boot-timeout'); }, 8000);
+  })();
+</script>
 </head>
 <body>
 

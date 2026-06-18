@@ -11,6 +11,10 @@ import { initLeaderboard, renderLeaderboard } from './leaderboard.js';
 import { initForest, relayoutForest } from './forest.js';
 import './pwa.js'; // registers the service worker + auto-update polling
 
+// Tell the inline self-heal bootstrap (index.html) that the app shell booted, so
+// it doesn't clear caches + reload thinking we're stuck on a stale bundle.
+window.__lgBooted = true;
+
 initInteractions();
 initUpload();
 initPurchase();
