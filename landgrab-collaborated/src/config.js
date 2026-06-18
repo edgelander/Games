@@ -14,3 +14,14 @@ export function colorForId(id) {
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   return PLAYER_COLORS[h % PLAYER_COLORS.length];
 }
+
+// Pick a legible text color (black or white) for text drawn ON a given color,
+// using YIQ brightness — light backgrounds (yellow/teal) get black text, dark
+// ones (red/purple/blue) get white.
+export function textColorFor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#000';
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
+}
