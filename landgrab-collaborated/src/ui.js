@@ -12,7 +12,7 @@ import {
 export function updateBadge() {
   const count = getPlotCount();
   countDisplay.textContent = count;
-  baseDisplay.textContent = '$' + getBasePrice(count).toFixed(2);
+  baseDisplay.textContent = '🪙' + getBasePrice(count);
 }
 
 // Header wallet chip: coin balance + nickname.
@@ -46,7 +46,7 @@ export function updatePrice() {
 
   const afford = getBalance() >= cost.total;
   buyBtn.disabled = !afford;
-  buyBtn.classList.toggle('pricey', cost.total >= 20 && afford);
+  buyBtn.classList.toggle('pricey', cost.total >= 200 && afford);
   buyBtn.classList.toggle('cant-afford', !afford);
   buyBtn.textContent = afford ? `CLAIM — 🪙${cost.total}` : `NEED 🪙${cost.total}`;
 

@@ -1,28 +1,38 @@
 // Pure pricing math — no DOM, no side effects. Easy to test and to move
-// server-side in Phase 2 (where pricing becomes authoritative for everyone).
+// server-side later. All prices are WHOLE coins (the in-game currency); there
+// are no cents.
 
-// Base price starts at $2.00 and rises $0.10 for every 500 plots sold.
+// Economy is balanced around the 1000-coin starting balance (config.STARTING_BALANCE):
+//  - a tiny plot costs MIN_LAND, so a new player can claim plenty of small plots;
+//  - covering the WHOLE board costs FULL_LAND, set ABOVE the starting balance so
+//    nobody can blanket the entire board right off the bat — you grow into it (or
+//    grow by overtaking others).
+const MIN_LAND = 10;      // a tiny plot
+const FULL_LAND = 2500;   // covering the entire board (intentionally > STARTING_BALANCE)
+const INFLATE_EVERY = 100; // +1 coin to the base land price per this many plots sold
+
+// Base land price (the floor for a tiny plot), drifting up slowly as the board fills.
 export function getBasePrice(totalUploads) {
-  return 2.0 + Math.floor(totalUploads / 500) * 0.1;
+  return MIN_LAND + Math.floor(totalUploads / INFLATE_EVERY);
 }
 
 // Price scales with how much of the canvas the plot covers (pct = 0..1),
-// curving from the base price up toward $30 at full coverage.
+// curving from the base price up toward FULL_LAND at full coverage. Whole coins.
 export function calcPrice(totalUploads, pct) {
   const b = getBasePrice(totalUploads);
-  return Math.round(b * Math.pow(30 / b, pct) * 100) / 100;
+  return Math.max(1, Math.round(b * Math.pow(FULL_LAND / b, pct)));
 }
 
 // Total cost to place a plot: the land price for the area it covers, PLUS the
 // full current value of every plot it overtakes. So you always pay strictly
 // more than the land you're covering is worth. `contestedValues` is the list of
-// price_paid values of the plots being overtaken.
+// price_paid values of the plots being overtaken. All whole coins.
 export function placementCost(totalUploads, pct, contestedValues = []) {
   const land = calcPrice(totalUploads, pct);
-  const overtake = contestedValues.reduce((sum, v) => sum + (Number(v) || 0), 0);
+  const overtake = Math.round(contestedValues.reduce((sum, v) => sum + (Number(v) || 0), 0));
   return {
     land,
-    overtake: Math.round(overtake * 100) / 100,
-    total: Math.round((land + overtake) * 100) / 100,
+    overtake,
+    total: land + overtake,
   };
 }
