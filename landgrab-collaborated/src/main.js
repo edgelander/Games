@@ -8,6 +8,7 @@ import { initPurchase } from './purchase.js';
 import { loadPlots, subscribeToPlots, relayoutPlots } from './plots.js';
 import { initIdentity, onBalanceChange, currentPlayer, applyCredit } from './identity.js';
 import { initLeaderboard, renderLeaderboard } from './leaderboard.js';
+import { initForest, relayoutForest } from './forest.js';
 import './pwa.js'; // registers the service worker + auto-update polling
 
 initInteractions();
@@ -20,6 +21,7 @@ onBalanceChange(updateWallet);
 // Establish the player (nickname/wallet), then load the shared board and keep
 // it live as other players claim and overtake plots.
 async function start() {
+  initForest(); // plant the forest before plots load so claimed land starts cleared
   await initIdentity();
   updateWallet();
   await loadPlots();
@@ -47,5 +49,6 @@ start();
 // Keep prices and committed plots positioned correctly on resize.
 window.addEventListener('resize', () => {
   relayoutPlots();
+  relayoutForest();
   updatePrice();
 });

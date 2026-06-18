@@ -36,9 +36,18 @@ main {
     var(--dirt);
   border: 3px solid var(--fence);
 }
-.canvas::before, .canvas::after { content: '🌲'; position: absolute; font-size: 1.1rem; top: 4px; pointer-events: none; line-height: 1; z-index: 0; }
-.canvas::before { left: 6px; }
-.canvas::after  { right: 6px; }
+/* ── The forest: dense little trees behind the board, bulldozed as land is claimed ── */
+.forest { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.forest .tree {
+  position: absolute; transform: translate(-50%, -50%);
+  line-height: 1; user-select: none;
+  transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.4, 0, 0.6, 1);
+}
+/* Cleared trees topple, shrink, and fade — like being cut down / bulldozed. */
+.forest .tree.cleared {
+  opacity: 0;
+  transform: translate(-50%, 10%) scale(0.15) rotate(38deg);
+}
 
 /* Empty state hint */
 #empty-hint {
