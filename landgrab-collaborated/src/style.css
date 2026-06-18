@@ -54,7 +54,6 @@ main {
   position: absolute;
   display: flex; flex-direction: column;
   border: 2px solid var(--fence); /* thin owner-colored frame (color set inline per owner) */
-  box-shadow: 4px 4px 0 #000;
   overflow: hidden;
   pointer-events: none; /* locked — can't move */
   z-index: 2;
