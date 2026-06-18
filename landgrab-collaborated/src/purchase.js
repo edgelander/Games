@@ -1,7 +1,7 @@
 // Committing the staging tile into a permanent, owned plot — including the
 // pay-to-overtake step that covers any plots you place on top of.
 import { state } from './state.js';
-import { isSupabaseConfigured } from './supabase.js';
+import { supabase, isSupabaseConfigured } from './supabase.js';
 import { savePlot, uploadImage, findContested, overtake, getPlotCount } from './plots.js';
 import { placementCost } from './pricing.js';
 import { currentPlayer, getBalance, spend } from './identity.js';
@@ -20,7 +20,10 @@ async function buyPlot() {
 
   const rect = getTileRectFraction();
   const contested = findContested(rect);
-  const cost = placementCost(getPlotCount(), rect.coverage, contested.map((p) => p.price_paid));
+  // You're never charged to cover your OWN land — only rivals' plots cost a
+  // takeover fee (which is then paid out to those rivals, see below).
+  const rivals = contested.filter((p) => p.owner_id !== currentPlayer.id);
+  const cost = placementCost(getPlotCount(), rect.coverage, rivals.map((p) => p.price_paid));
 
   if (getBalance() < cost.total) {
     alert(`Not enough coins — you need 🪙${cost.total} but have 🪙${Math.round(getBalance())}.`);
@@ -53,6 +56,7 @@ async function buyPlot() {
     await savePlot(plot);      // render + persist our new plot
     await overtake(contested); // cover the plots underneath
     const balance = await spend(cost.total);
+    await payOvertakenOwners(rivals); // the takeover fee goes to the rivals we covered
 
     resetStaging();
     showSuccess(cost.total, balance);
@@ -66,6 +70,27 @@ async function buyPlot() {
   } finally {
     buyBtn.disabled = false;
   }
+}
+
+// Pay each overtaken rival the value of the plot(s) we just covered — the
+// takeover fee the buyer paid flows to the victims instead of evaporating.
+// Aggregated per owner so one tile over several of a rival's plots is one credit.
+// Non-fatal: the buyer's purchase already committed, so a failed payout is only
+// logged. (Each victim's own client mirrors the credit live from realtime.)
+async function payOvertakenOwners(rivals) {
+  if (!isSupabaseConfigured || rivals.length === 0) return;
+  const byOwner = new Map();
+  for (const p of rivals) {
+    if (!p.owner_id) continue;
+    byOwner.set(p.owner_id, (byOwner.get(p.owner_id) || 0) + (Number(p.price_paid) || 0));
+  }
+  await Promise.all(
+    [...byOwner].map(([p_id, p_amount]) =>
+      supabase.rpc('credit_balance', { p_id, p_amount }).then(({ error }) => {
+        if (error) console.error('[LandGrab] Payout to', p_id, 'failed:', error.message);
+      }),
+    ),
+  );
 }
 
 // Wire up the BUY button and the success-overlay buttons.

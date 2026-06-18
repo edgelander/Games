@@ -30,3 +30,6 @@ export const lbToggle      = document.getElementById('lb-toggle');
 export const lbClose       = document.getElementById('lb-close');
 export const lbPanel       = document.getElementById('lb-panel');
 export const lbList        = document.getElementById('lb-list');
+
+// Living economy: transient toast (e.g. "you got paid when your land was grabbed").
+export const toast         = document.getElementById('toast');

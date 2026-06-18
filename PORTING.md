@@ -17,21 +17,25 @@ This repository (`edgelander/Games`) is a **fork**. This file is the one place t
 | 2 | Shared multiplayer canvas via Supabase (live board, image storage) | ✅ Done & deployed |
 | 4 | Game v1 — nicknames + ownership, coin wallet, **pay-to-overtake**, live leaderboard | ✅ Done (needs SQL migration + redeploy) |
 | 5 | Accounts (username + PIN login, survives reinstall) + client-side image compression | ✅ Done (needs SQL migration + one-time reset + redeploy) |
+| 6 | Living economy v1 — **overtake payouts**: the takeover fee now pays the overtaken owner (first coin income) + live "you got paid" toast; covering your own land is free | ✅ Done (needs SQL migration + redeploy) |
 | 3 | Native iOS app via Capacitor → App Store | ⬜ Not started |
 
 **Fast-follows (not built yet):** real-money/crypto coin top-ups — which should arrive with a
 move to **Supabase Auth** (`auth.uid()`-scoped RLS + server-authoritative balances), replacing
 the v1 client-trusted PIN/balance model; private friend rooms (`world_id` is already in the
-schema); and an "earn income" economy.
+schema); and more of the **living economy** — a recurring coin *faucet* (passive rent on owned
+land / daily bonus) and **push notifications** ("someone grabbed your land!"). Note: Phase 6
+makes the overtake fee a player-to-player *transfer*, so the only faucet today is still the
+1000-coin starting grant — the rent/daily slice adds the real income tap.
 
 **Content policy:** intentionally unmoderated — free speech. No editorial review or reporting
 flow is planned. The only related item kept on the table is a minimal **takedown switch**
 (remove a single plot), needed solely to comply with host requirements (Vercel / Supabase /
 Apple App Store ToS + illegal content) and keep the app online — not editorial moderation.
 
-> ⚠️ Phases 4–5 require re-running `landgrab-collaborated/supabase-setup.sql` (adds the
-> ownership/world/active columns, `players` table, pgcrypto, and the `login` RPC) and a
-> redeploy. To clear the old test board / duplicate accounts, also run
+> ⚠️ Phases 4–6 require re-running `landgrab-collaborated/supabase-setup.sql` (adds the
+> ownership/world/active columns, `players` table, pgcrypto, the `login` RPC, and the
+> `credit_balance` RPC that pays overtaken owners) and a redeploy. To clear the old test board / duplicate accounts, also run
 > `landgrab-collaborated/supabase-reset.sql` **once** (it's destructive — kept separate so
 > setup stays safe to re-run). Login is **username + PIN**; images are compressed in-browser
 > before upload to conserve storage.

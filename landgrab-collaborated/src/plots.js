@@ -176,7 +176,9 @@ export async function loadPlots() {
 }
 
 // Listen for plots added (INSERT) and overtaken (UPDATE → active=false).
-export function subscribeToPlots(onChange) {
+// `onOvertaken(row)` fires with the full overtaken row so callers can tell when
+// it was THEIR plot (row.owner_id) and what it paid out (row.price_paid).
+export function subscribeToPlots(onChange, onOvertaken) {
   if (!isSupabaseConfigured) return;
   supabase
     .channel('plots-realtime')
@@ -192,7 +194,10 @@ export function subscribeToPlots(onChange) {
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'plots', filter: `world_id=eq.${WORLD_ID}` },
       (payload) => {
-        if (payload.new.active === false) removeById(payload.new.id);
+        if (payload.new.active === false) {
+          removeById(payload.new.id);
+          if (onOvertaken) onOvertaken(payload.new);
+        }
         if (onChange) onChange();
       },
     )

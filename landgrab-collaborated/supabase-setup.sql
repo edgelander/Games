@@ -92,6 +92,24 @@ $$;
 
 grant execute on function public.login(text, text, text) to anon, authenticated;
 
+-- credit_balance(): add coins to a player's wallet atomically. Used to pay the
+-- overtaken owner when their plot is grabbed (the buyer's overtake payment flows
+-- to the victim instead of evaporating). The single `balance = balance + amount`
+-- UPDATE is race-free, and is strictly safer than the open UPDATE policy below
+-- since callers can only ever *add* a positive amount. SECURITY DEFINER so the
+-- RLS-locked players table can still be credited. Balances remain client-trusted
+-- in v1 — the real-money phase moves to Supabase Auth + server-authoritative math.
+create or replace function public.credit_balance(p_id text, p_amount numeric)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.players set balance = balance + p_amount where id = p_id and p_amount > 0;
+$$;
+
+grant execute on function public.credit_balance(text, numeric) to anon, authenticated;
+
 do $$
 begin
   if not exists (

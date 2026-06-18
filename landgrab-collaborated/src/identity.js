@@ -43,6 +43,19 @@ export async function spend(amount) {
   return balance;
 }
 
+// Mirror a credit that already happened server-side (the buyer's credit_balance
+// RPC pays us when our plot is overtaken). This only updates the LOCAL balance so
+// the wallet/leaderboard react immediately — no DB write, or we'd double-count.
+// On next login the authoritative players.balance confirms the amount.
+export function applyCredit(amount) {
+  const amt = Number(amount) || 0;
+  if (amt <= 0) return balance;
+  balance = Math.round((balance + amt) * 100) / 100;
+  emitBalance();
+  if (!isSupabaseConfigured) localStorage.setItem(BAL_KEY, String(balance));
+  return balance;
+}
+
 // Show the login card and resolve with { username, pin }.
 function askLogin(errorMsg) {
   return new Promise((resolve) => {
