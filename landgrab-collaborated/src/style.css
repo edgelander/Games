@@ -182,8 +182,8 @@ main {
    overlapping the picture (background + text color set inline per owner). */
 .committed-plot .owner-tag {
   flex: 0 0 auto; z-index: 3;
-  font-family: 'VT323', monospace; font-size: 0.62rem; line-height: 1;
-  padding: 1px 4px; text-align: center;
+  font-family: 'VT323', monospace; font-size: 0.62rem; line-height: 0.9;
+  padding: 0 4px; text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .committed-plot.contested { outline: 3px dashed var(--red); outline-offset: -3px; z-index: 4; }
