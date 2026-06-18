@@ -9,6 +9,16 @@ const CELL = 22; // grid spacing in px — small + dense
 let layer = null;
 const trees = []; // { el, fx, fy, cleared } — fx/fy are the tree's fractional center
 
+// Deterministic pseudo-random in [0,1) seeded by a cell's integer (c, r) coords
+// (+ a salt to get independent streams). Keyed to the physical cell — NOT a
+// running index — so the same cell yields the same tree on every load and on
+// every device, regardless of how many columns/rows the viewport produces.
+function cellRand(c, r, salt) {
+  let h = (Math.imul(c, 374761393) ^ Math.imul(r, 668265263) ^ Math.imul(salt, 0x9e3779b1)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
 // Build (or rebuild) the forest grid to fill the current canvas size.
 export function initForest() {
   if (!layer) {
@@ -27,15 +37,16 @@ export function initForest() {
   const frag = document.createDocumentFragment();
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      // Jitter + size variation so the rows don't read as a rigid grid.
-      const px = c * CELL + CELL / 2 + (Math.random() - 0.5) * CELL * 0.7;
-      const py = r * CELL + CELL / 2 + (Math.random() - 0.5) * CELL * 0.7;
+      // Deterministic jitter + size variation so the rows don't read as a rigid
+      // grid, yet the forest is identical across reloads and web vs PWA.
+      const px = c * CELL + CELL / 2 + (cellRand(c, r, 1) - 0.5) * CELL * 0.7;
+      const py = r * CELL + CELL / 2 + (cellRand(c, r, 2) - 0.5) * CELL * 0.7;
       const el = document.createElement('span');
       el.className = 'tree';
       el.textContent = '🌲';
       el.style.left = px + 'px';
       el.style.top = py + 'px';
-      el.style.fontSize = (0.8 + Math.random() * 0.4).toFixed(2) + 'rem';
+      el.style.fontSize = (0.8 + cellRand(c, r, 3) * 0.4).toFixed(2) + 'rem';
       frag.appendChild(el);
       trees.push({ el, fx: px / cr.width, fy: py / cr.height, cleared: false });
     }
