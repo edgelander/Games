@@ -59,6 +59,7 @@ export function updatePrice() {
 export function resetStaging() {
   markContested([]);
   stagingTile.classList.remove('active');
+  stagingTile.style.opacity = ''; // undo the demolish-time hide
   stagingImg.src = '';
   stagingImg.style.display = 'none';
   stagingPdf.style.display = 'flex';

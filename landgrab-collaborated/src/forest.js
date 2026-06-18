@@ -67,3 +67,31 @@ export function clearForestUnder(rect) {
     }
   }
 }
+
+// Animated version for the local player's own claim: topple the footprint's
+// trees AND kick up dust puffs, then resolve once the demolition has played out
+// (so the caller can place the photo after the land is visibly cleared).
+const DEMOLISH_MS = 550;
+export function bulldozeForest(rect) {
+  clearForestUnder(rect); // topple the standing trees (reuses the .cleared CSS)
+
+  if (layer && rect) {
+    const cr = canvas.getBoundingClientRect();
+    const w = rect.width * cr.width;
+    const h = rect.height * cr.height;
+    const count = Math.max(5, Math.min(12, Math.round((w * h) / 3000)));
+    for (let i = 0; i < count; i++) {
+      const puff = document.createElement('span');
+      puff.className = 'dust';
+      puff.textContent = '💨';
+      puff.style.left = (rect.x + Math.random() * rect.width) * cr.width + 'px';
+      puff.style.top = (rect.y + Math.random() * rect.height) * cr.height + 'px';
+      puff.style.fontSize = (0.9 + Math.random() * 0.7).toFixed(2) + 'rem';
+      puff.style.animationDelay = (Math.random() * 0.15).toFixed(2) + 's';
+      puff.addEventListener('animationend', () => puff.remove());
+      layer.appendChild(puff);
+    }
+  }
+
+  return new Promise((resolve) => setTimeout(resolve, DEMOLISH_MS));
+}

@@ -3,6 +3,7 @@
 import { state } from './state.js';
 import { supabase, isSupabaseConfigured } from './supabase.js';
 import { savePlot, uploadImage, findContested, overtake, getPlotCount } from './plots.js';
+import { bulldozeForest } from './forest.js';
 import { placementCost } from './pricing.js';
 import { currentPlayer, getBalance, spend } from './identity.js';
 import { WORLD_ID } from './config.js';
@@ -13,6 +14,8 @@ import {
   updateBadge, updateWallet, resetStaging, showSuccess, getTileRectFraction,
 } from './ui.js';
 import { renderLeaderboard } from './leaderboard.js';
+
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Snapshot the staging tile, pay (land + overtake), and commit it to the board.
 async function buyPlot() {
@@ -53,12 +56,21 @@ async function buyPlot() {
         : stagingImg.src;
     }
 
-    await savePlot(plot);      // render + persist our new plot
-    await overtake(contested); // cover the plots underneath
-    const balance = await spend(cost.total);
-    await payOvertakenOwners(rivals); // the takeover fee goes to the rivals we covered
+    // 1. Demolish: hide the preview so the forest underneath shows, then
+    //    bulldoze the footprint (trees topple + dust) before the photo lands.
+    stagingTile.style.opacity = '0';
+    await bulldozeForest(rect);
 
+    // 2. Place: the photo drops into the cleared ground.
+    const saved = await savePlot(plot); // render + persist our new plot
+    saved?.el?.classList.add('dropping');
+    await overtake(contested);          // cover the plots underneath
+    const balance = await spend(cost.total);
+    await payOvertakenOwners(rivals);   // the takeover fee goes to the rivals we covered
     resetStaging();
+
+    // 3. Sign: let the placed photo be seen, then pop the success overlay.
+    await delay(400);
     showSuccess(cost.total, balance);
     updateBadge();
     updateWallet();
@@ -67,6 +79,7 @@ async function buyPlot() {
     console.error('[LandGrab] Buy failed:', e);
     alert('Could not stake your plot: ' + (e.message || e));
     buyBtn.textContent = originalLabel;
+    stagingTile.style.opacity = ''; // bring the preview back so they can retry
   } finally {
     buyBtn.disabled = false;
   }
