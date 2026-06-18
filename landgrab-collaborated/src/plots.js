@@ -7,7 +7,7 @@
 // costs more than that value (see pricing.placementCost).
 import { supabase, isSupabaseConfigured } from './supabase.js';
 import { canvas, emptyHint } from './dom.js';
-import { WORLD_ID } from './config.js';
+import { WORLD_ID, textColorFor } from './config.js';
 import { compressImage } from './image.js';
 
 const PDF_SVG =
@@ -48,21 +48,28 @@ export function renderPlot(plot) {
   if (plot.owner_color) el.style.borderColor = plot.owner_color;
   positionElement(el, plot);
 
+  // The photo/PDF lives in its own region so the nameplate below never covers it.
+  const photo = document.createElement('div');
+  photo.className = 'plot-photo';
   if (plot.is_image && plot.image_url) {
     const img = document.createElement('img');
     img.src = plot.image_url;
-    el.appendChild(img);
+    photo.appendChild(img);
   } else {
     const wrap = document.createElement('div');
     wrap.className = 'pdf-icon-wrap';
     wrap.innerHTML = PDF_SVG;
-    el.appendChild(wrap);
+    photo.appendChild(wrap);
   }
+  el.appendChild(photo);
 
   if (plot.owner_name) {
     const tag = document.createElement('div');
     tag.className = 'owner-tag';
-    if (plot.owner_color) tag.style.background = plot.owner_color;
+    if (plot.owner_color) {
+      tag.style.background = plot.owner_color;
+      tag.style.color = textColorFor(plot.owner_color);
+    }
     tag.textContent = plot.owner_name;
     el.appendChild(tag);
   }
