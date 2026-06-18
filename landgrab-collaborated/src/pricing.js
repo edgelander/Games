@@ -5,12 +5,13 @@
 // Economy is balanced around the 1000-coin starting balance (config.STARTING_BALANCE):
 //  - a tiny plot costs MIN_LAND, so a new player can claim plenty of small plots;
 //  - the price curves up EXPONENTIALLY toward FULL_LAND for covering the whole
-//    board. FULL_LAND is set wildly above the starting balance (100× the 1000
-//    start) so blanketing the board is a monopoly-endgame prize — unattainable on
-//    starting coins and only reachable by a player who has dominated the board and
-//    amassed a fortune (e.g. half the board already costs your entire 1000 start).
-const MIN_LAND = 10;        // a tiny plot
-const FULL_LAND = 100000;   // covering the ENTIRE board — wildly unattainable; monopoly only
+//    board. FULL_LAND is set wildly above the starting balance (1,000,000 — a
+//    thousand times the 1000 start) so blanketing the board is a monopoly-endgame
+//    prize: unattainable on starting coins and only reachable by a player who has
+//    dominated the board and amassed a fortune (≈25% of the board already costs
+//    your entire 1000 start).
+const MIN_LAND = 100;        // a tiny plot starts here
+const FULL_LAND = 1000000;   // covering the ENTIRE board — wildly unattainable; monopoly only
 const INFLATE_EVERY = 100;  // +1 coin to the base land price per this many plots sold
 
 // Base land price (the floor for a tiny plot), drifting up slowly as the board fills.
