@@ -6,7 +6,7 @@ import { savePlot, uploadImage, findContested, overtake, getPlotCount } from './
 import { bulldozeForest } from './forest.js';
 import { placementCost } from './pricing.js';
 import { currentPlayer, getBalance, spend } from './identity.js';
-import { WORLD_ID } from './config.js';
+import { WORLD_ID, formatCoins } from './config.js';
 import {
   stagingTile, stagingImg, buyBtn, successMsg, btnAnother, btnStay, fileInput,
 } from './dom.js';
@@ -29,7 +29,7 @@ async function buyPlot() {
   const cost = placementCost(getPlotCount(), rect.coverage, rivals.map((p) => p.price_paid));
 
   if (getBalance() < cost.total) {
-    alert(`Not enough coins — you need 🪙${cost.total} but have 🪙${Math.round(getBalance())}.`);
+    alert(`Not enough coins — you need 🪙${formatCoins(cost.total)} but have 🪙${formatCoins(getBalance())}.`);
     return;
   }
 

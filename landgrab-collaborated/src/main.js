@@ -7,6 +7,7 @@ import { initUpload } from './upload.js';
 import { initPurchase } from './purchase.js';
 import { loadPlots, subscribeToPlots, relayoutPlots } from './plots.js';
 import { initIdentity, onBalanceChange, currentPlayer, applyCredit } from './identity.js';
+import { formatCoins } from './config.js';
 import { initLeaderboard, renderLeaderboard } from './leaderboard.js';
 import { initForest, relayoutForest } from './forest.js';
 import './pwa.js'; // registers the service worker + auto-update polling
@@ -44,7 +45,7 @@ async function start() {
       if (paid <= 0) return;
       applyCredit(paid);
       updateWallet();
-      showToast(`🪙 Someone grabbed your land — you earned 🪙${Math.round(paid)}!`);
+      showToast(`🪙 Someone grabbed your land — you earned 🪙${formatCoins(paid)}!`);
     },
   );
 }

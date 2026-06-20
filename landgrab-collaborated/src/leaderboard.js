@@ -3,6 +3,7 @@
 // in-memory board whenever plots change.
 import { getLeaderboard } from './plots.js';
 import { currentPlayer } from './identity.js';
+import { formatCoins } from './config.js';
 import { lbToggle, lbClose, lbPanel, lbList } from './dom.js';
 
 export function renderLeaderboard() {
@@ -19,7 +20,7 @@ export function renderLeaderboard() {
       `<span class="lb-rank">${i + 1}</span>` +
       `<span class="lb-dot" style="background:${r.color || '#9A8A6A'}"></span>` +
       `<span class="lb-name">${escapeHtml(r.name || 'Anon')}</span>` +
-      `<span class="lb-worth">🪙${Math.round(r.worth)}</span>`;
+      `<span class="lb-worth">🪙${formatCoins(r.worth)}</span>`;
     lbList.appendChild(li);
   });
 }

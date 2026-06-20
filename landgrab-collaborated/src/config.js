@@ -25,3 +25,8 @@ export function textColorFor(hex) {
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
   return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
 }
+
+// Format a whole-coin amount with thousands separators (e.g. 215443 -> "215,443").
+export function formatCoins(n) {
+  return Math.round(Number(n) || 0).toLocaleString('en-US');
+}

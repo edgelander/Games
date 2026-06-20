@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { getBasePrice, placementCost } from './pricing.js';
 import { getPlotCount, findContested, markContested } from './plots.js';
 import { getBalance, currentPlayer } from './identity.js';
+import { formatCoins } from './config.js';
 import {
   canvas, stagingTile, buyBtn, countDisplay, baseDisplay, coinDisplay, nameDisplay,
   stagingImg, stagingPdf, hintText, sPrice, sBalance, successMsg, toast,
@@ -12,12 +13,12 @@ import {
 export function updateBadge() {
   const count = getPlotCount();
   countDisplay.textContent = count;
-  baseDisplay.textContent = '🪙' + getBasePrice(count);
+  baseDisplay.textContent = '🪙' + formatCoins(getBasePrice(count));
 }
 
 // Header wallet chip: coin balance + nickname.
 export function updateWallet() {
-  coinDisplay.textContent = Math.round(getBalance());
+  coinDisplay.textContent = formatCoins(getBalance());
   if (currentPlayer.name) nameDisplay.textContent = currentPlayer.name;
 }
 
@@ -48,10 +49,10 @@ export function updatePrice() {
   buyBtn.disabled = !afford;
   buyBtn.classList.toggle('pricey', cost.total >= 500 && afford);
   buyBtn.classList.toggle('cant-afford', !afford);
-  buyBtn.textContent = afford ? `CLAIM — 🪙${cost.total}` : `NEED 🪙${cost.total}`;
+  buyBtn.textContent = afford ? `CLAIM — 🪙${formatCoins(cost.total)}` : `NEED 🪙${formatCoins(cost.total)}`;
 
   hintText.textContent = contested.length
-    ? `Overtaking ${contested.length} plot(s): land 🪙${cost.land} + takeover 🪙${cost.overtake}`
+    ? `Overtaking ${contested.length} plot(s): land 🪙${formatCoins(cost.land)} + takeover 🪙${formatCoins(cost.overtake)}`
     : 'Drag · ⛏ to resize';
 }
 
@@ -82,7 +83,7 @@ export function showToast(msg) {
 
 // Show the "LAND ACQUIRED!" overlay with the price paid + remaining balance.
 export function showSuccess(price, balance) {
-  sPrice.textContent = 'Cost: 🪙' + Math.round(price);
-  sBalance.textContent = 'Balance: 🪙' + Math.round(balance);
+  sPrice.textContent = 'Cost: 🪙' + formatCoins(price);
+  sBalance.textContent = 'Balance: 🪙' + formatCoins(balance);
   successMsg.classList.add('visible');
 }
