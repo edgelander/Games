@@ -3,27 +3,31 @@
 // are no cents.
 
 // Economy is balanced around the 1000-coin starting balance (config.STARTING_BALANCE):
-//  - a tiny plot costs MIN_LAND, so a new player can claim plenty of small plots;
-//  - the price curves up EXPONENTIALLY toward FULL_LAND for covering the whole
-//    board. FULL_LAND is set wildly above the starting balance (1,000,000 — a
-//    thousand times the 1000 start) so blanketing the board is a monopoly-endgame
-//    prize: unattainable on starting coins and only reachable by a player who has
-//    dominated the board and amassed a fortune (≈25% of the board already costs
-//    your entire 1000 start).
-const MIN_LAND = 100;        // a tiny plot starts here
-const FULL_LAND = 1000000;   // covering the ENTIRE board — wildly unattainable; monopoly only
-const INFLATE_EVERY = 100;  // +1 coin to the base land price per this many plots sold
+//  - a tiny plot starts at MIN_LAND (cheap), but that floor COMPOUNDS as the board
+//    fills: every plot already on the board makes the next small photo ~GROWTH×
+//    pricier, climbing from MIN_LAND up to the FULL_LAND cap over PLOTS_TO_MAX
+//    plots. So early claimers get cheap land and waiting gets expensive fast.
+//  - FULL_LAND (1,000,000 — a thousand times the 1000 start) is both the price to
+//    cover the whole board AND the ceiling the small-photo price compounds toward;
+//    once the board is that full, essentially everything costs a million. Owning
+//    the board is a monopoly-endgame prize, unattainable on starting coins.
+const MIN_LAND = 100;          // a tiny plot starts here (compounds up from here)
+const FULL_LAND = 1000000;     // whole-board price AND the compounding cap — monopoly only
+const PLOTS_TO_MAX = 150;      // plots on the board for the small-photo price to reach FULL_LAND
+// Per-plot compound factor (~1.063): MIN_LAND × GROWTH^PLOTS_TO_MAX === FULL_LAND.
+const GROWTH = Math.pow(FULL_LAND / MIN_LAND, 1 / PLOTS_TO_MAX);
 
-// Base land price (the floor for a tiny plot), drifting up slowly as the board fills.
+// Base land price (the floor for a tiny plot) — compounds with how many plots are
+// already on the board, capped at FULL_LAND. Whole coins.
 export function getBasePrice(totalUploads) {
-  return MIN_LAND + Math.floor(totalUploads / INFLATE_EVERY);
+  return Math.min(Math.round(MIN_LAND * Math.pow(GROWTH, totalUploads)), FULL_LAND);
 }
 
 // Price scales with how much of the canvas the plot covers (pct = 0..1),
 // curving from the base price up toward FULL_LAND at full coverage. Whole coins.
 export function calcPrice(totalUploads, pct) {
   const b = getBasePrice(totalUploads);
-  return Math.max(1, Math.round(b * Math.pow(FULL_LAND / b, pct)));
+  return Math.min(FULL_LAND, Math.max(1, Math.round(b * Math.pow(FULL_LAND / b, pct))));
 }
 
 // Total cost to place a plot: the land price for the area it covers, PLUS the
