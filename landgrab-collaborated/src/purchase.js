@@ -2,9 +2,8 @@
 // pay-to-overtake step that covers any plots you place on top of.
 import { state } from './state.js';
 import { supabase, isSupabaseConfigured } from './supabase.js';
-import { savePlot, uploadImage, findContested, overtake, getPlotCount } from './plots.js';
+import { savePlot, uploadImage, overtake, computePlacement } from './plots.js';
 import { bulldozeForest } from './forest.js';
-import { placementCost } from './pricing.js';
 import { currentPlayer, getBalance, spend } from './identity.js';
 import { WORLD_ID, formatCoins } from './config.js';
 import {
@@ -22,11 +21,10 @@ async function buyPlot() {
   if (!stagingTile.classList.contains('active')) return;
 
   const rect = getTileRectFraction();
-  const contested = findContested(rect);
-  // You're never charged to cover your OWN land — only rivals' plots cost a
-  // takeover fee (which is then paid out to those rivals, see below).
-  const rivals = contested.filter((p) => p.owner_id !== currentPlayer.id);
-  const cost = placementCost(getPlotCount(), rect.coverage, rivals.map((p) => p.price_paid));
+  // Shared calc (same one the CLAIM button shows): your own overlapped plots are
+  // replaced for free; each rival plot crossed costs its value scaled by how much
+  // of it you cover — and `fees` (per rival) is exactly what each rival is paid.
+  const { contested, rivals, fees, cost } = computePlacement(rect, currentPlayer.id);
 
   if (getBalance() < cost.total) {
     alert(`Not enough coins — you need 🪙${formatCoins(cost.total)} but have 🪙${formatCoins(getBalance())}.`);
@@ -66,7 +64,7 @@ async function buyPlot() {
     saved?.el?.classList.add('dropping');
     await overtake(contested);          // cover the plots underneath
     const balance = await spend(cost.total);
-    await payOvertakenOwners(rivals);   // the takeover fee goes to the rivals we covered
+    await payOvertakenOwners(rivals, fees); // the (scaled) takeover fee goes to the rivals we covered
     resetStaging();
 
     // 3. Sign: let the placed photo be seen, then pop the success overlay.
@@ -85,21 +83,22 @@ async function buyPlot() {
   }
 }
 
-// Pay each overtaken rival the value of the plot(s) we just covered — the
-// takeover fee the buyer paid flows to the victims instead of evaporating.
-// Aggregated per owner so one tile over several of a rival's plots is one credit.
-// Non-fatal: the buyer's purchase already committed, so a failed payout is only
-// logged. (Each victim's own client mirrors the credit live from realtime.)
-async function payOvertakenOwners(rivals) {
+// Pay each overtaken rival the (coverage-scaled) fee for the plot(s) we just
+// covered — the takeover fee the buyer paid flows to the victims instead of
+// evaporating. `fees[i]` is the scaled amount for `rivals[i]` (same value the
+// buyer was charged), aggregated per owner so one tile over several of a rival's
+// plots is one credit. Non-fatal: the buyer's purchase already committed, so a
+// failed payout is only logged. (Each victim's own client mirrors the credit live.)
+async function payOvertakenOwners(rivals, fees) {
   if (!isSupabaseConfigured || rivals.length === 0) return;
   const byOwner = new Map();
-  for (const p of rivals) {
-    if (!p.owner_id) continue;
-    byOwner.set(p.owner_id, (byOwner.get(p.owner_id) || 0) + (Number(p.price_paid) || 0));
-  }
+  rivals.forEach((p, i) => {
+    if (!p.owner_id) return;
+    byOwner.set(p.owner_id, (byOwner.get(p.owner_id) || 0) + (Number(fees[i]) || 0));
+  });
   await Promise.all(
-    [...byOwner].map(([p_id, p_amount]) =>
-      supabase.rpc('credit_balance', { p_id, p_amount }).then(({ error }) => {
+    [...byOwner].map(([p_id, amount]) =>
+      supabase.rpc('credit_balance', { p_id, p_amount: Math.round(amount) }).then(({ error }) => {
         if (error) console.error('[LandGrab] Payout to', p_id, 'failed:', error.message);
       }),
     ),

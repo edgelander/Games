@@ -110,6 +110,26 @@ $$;
 
 grant execute on function public.credit_balance(text, numeric) to anon, authenticated;
 
+-- spend_balance(): deduct coins from a player's wallet ATOMICALLY (clamped at 0).
+-- This replaces the old client-side absolute write (`update players set balance = X`),
+-- which could clobber a concurrent credit_balance() and snap balances back toward the
+-- 1000 start. Doing the math server-side as `balance = balance - amount` makes spends
+-- and credits race-free against each other. Returns the new authoritative balance so the
+-- client can reconcile its local value. SECURITY DEFINER so the RLS-locked players table
+-- can still be debited; clients can only ever subtract a positive amount.
+create or replace function public.spend_balance(p_id text, p_amount numeric)
+returns numeric
+language sql
+security definer
+set search_path = public
+as $$
+  update public.players set balance = greatest(balance - p_amount, 0)
+   where id = p_id and p_amount > 0
+  returning balance;
+$$;
+
+grant execute on function public.spend_balance(text, numeric) to anon, authenticated;
+
 do $$
 begin
   if not exists (
@@ -139,19 +159,20 @@ drop policy if exists "anyone can update plots" on public.plots;
 create policy "anyone can update plots"
   on public.plots for update using (true) with check (true);
 
--- Players are locked down: no direct read/insert from clients (that would
--- expose pin_hash and let anyone forge accounts). Account creation/verification
--- happens only through login(). The one open door is UPDATE, used for spending
--- coins — still client-trusted in v1 (flagged; real-money phase replaces this).
+-- Players are fully locked down from direct client access: no read/insert/update.
+-- Reading would expose pin_hash and let anyone forge accounts; a direct (absolute)
+-- balance UPDATE could clobber concurrent credits and revert balances toward 1000.
+-- Every balance change now goes through a SECURITY DEFINER RPC instead —
+-- login() (create/verify), credit_balance() (+), spend_balance() (−) — each doing
+-- atomic, relative math. Still client-trusted in v1 (flagged; the real-money phase
+-- moves to Supabase Auth + fully server-authoritative balances).
 alter table public.players enable row level security;
 
 drop policy if exists "anyone can read players" on public.players;
 drop policy if exists "anyone can add players" on public.players;
-
 drop policy if exists "anyone can update players" on public.players;        -- legacy name (no-op now)
-drop policy if exists "anyone can update player balance" on public.players; -- actual name → makes re-run safe
-create policy "anyone can update player balance"
-  on public.players for update using (true) with check (true);
+drop policy if exists "anyone can update player balance" on public.players; -- remove the open balance UPDATE
+-- (No UPDATE policy: balances mutate only via the SECURITY DEFINER RPCs above.)
 
 -- 4. Public storage bucket for the uploaded photos ---------------------------
 insert into storage.buckets (id, name, public)

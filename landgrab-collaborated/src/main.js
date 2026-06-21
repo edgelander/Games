@@ -6,7 +6,7 @@ import { initInteractions } from './interactions.js';
 import { initUpload } from './upload.js';
 import { initPurchase } from './purchase.js';
 import { loadPlots, subscribeToPlots, relayoutPlots } from './plots.js';
-import { initIdentity, onBalanceChange, currentPlayer, applyCredit } from './identity.js';
+import { initIdentity, onBalanceChange, subscribeBalance } from './identity.js';
 import { formatCoins } from './config.js';
 import { initLeaderboard, renderLeaderboard } from './leaderboard.js';
 import { initForest, relayoutForest } from './forest.js';
@@ -32,22 +32,16 @@ async function start() {
   await loadPlots();
   updateBadge();
   initLeaderboard();
-  subscribeToPlots(
-    () => {
-      updateBadge();
-      renderLeaderboard();
-    },
-    // When one of OUR plots is grabbed, the buyer's payout already credited us
-    // server-side — mirror it locally and celebrate the income.
-    (row) => {
-      if (row.owner_id !== currentPlayer.id) return;
-      const paid = Number(row.price_paid) || 0;
-      if (paid <= 0) return;
-      applyCredit(paid);
-      updateWallet();
-      showToast(`🪙 Someone grabbed your land — you earned 🪙${formatCoins(paid)}!`);
-    },
-  );
+  subscribeToPlots(() => {
+    updateBadge();
+    renderLeaderboard();
+    updatePrice(); // a plot arriving/leaving changes the count → keep the live price in sync
+  });
+  // Authoritative wallet feed: when someone grabs our land we're paid the scaled
+  // takeover fee server-side; this picks up the exact credit and celebrates it.
+  subscribeBalance((earned) => {
+    showToast(`🪙 Someone grabbed your land — you earned 🪙${formatCoins(earned)}!`);
+  });
 }
 start();
 

@@ -1,7 +1,7 @@
 // Small UI helpers that read state and update the screen.
 import { state } from './state.js';
-import { getBasePrice, placementCost } from './pricing.js';
-import { getPlotCount, findContested, markContested } from './plots.js';
+import { getBasePrice } from './pricing.js';
+import { getPlotCount, markContested, computePlacement } from './plots.js';
 import { getBalance, currentPlayer } from './identity.js';
 import { formatCoins } from './config.js';
 import {
@@ -39,10 +39,10 @@ export function getTileRectFraction() {
 export function updatePrice() {
   if (!stagingTile.classList.contains('active')) return;
   const rect = getTileRectFraction();
-  const contested = findContested(rect);
+  // Same shared calc the purchase uses, so the button price always matches the
+  // amount charged (your own overlapped plots are free; rivals scale with coverage).
+  const { contested, cost } = computePlacement(rect, currentPlayer.id);
   markContested(contested);
-
-  const cost = placementCost(getPlotCount(), rect.coverage, contested.map((p) => p.price_paid));
   state.currentPrice = cost.total;
 
   const afford = getBalance() >= cost.total;
