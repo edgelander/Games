@@ -8,6 +8,7 @@
 import { supabase, isSupabaseConfigured } from './supabase.js';
 import { canvas, emptyHint } from './dom.js';
 import { WORLD_ID, textColorFor } from './config.js';
+import { placementCost } from './pricing.js';
 import { compressImage } from './image.js';
 import { clearForestUnder } from './forest.js';
 
@@ -90,15 +91,36 @@ export function relayoutPlots() {
 
 // ── Pay-to-overtake helpers ────────────────────────────────────────────────
 
-// Active plots FULLY covered by the given tile (fractions of canvas) — a plot is
-// only overtaken once the new tile completely contains it, so partially covered
-// photos stay on the board until they're entirely buried.
+// Fraction of an existing plot `p` covered by `tile` (both in canvas fractions):
+// intersection area ÷ p's own area, clamped to 0..1. 0 = no overlap, 1 = p fully buried.
+export function overlapFraction(tile, p) {
+  const ix = Math.max(0, Math.min(tile.x + tile.width, p.x + p.width) - Math.max(tile.x, p.x));
+  const iy = Math.max(0, Math.min(tile.y + tile.height, p.y + p.height) - Math.max(tile.y, p.y));
+  const area = p.width * p.height;
+  return area > 0 ? Math.min((ix * iy) / area, 1) : 0;
+}
+
+// Threshold below which an overlap is treated as a hairline edge-touch, not a real
+// crossing (avoids overtaking on a shared border from float rounding).
+const OVERLAP_EPS = 1e-4;
+
+// Active plots the given tile CROSSES OVER (any real overlap) — crossing any part
+// of a plot overtakes it; the fee then scales with overlapFraction (see computePlacement).
 export function findContested(tile) {
-  return plots.filter((p) =>
-    p.x >= tile.x && p.y >= tile.y &&
-    p.x + p.width <= tile.x + tile.width &&
-    p.y + p.height <= tile.y + tile.height,
-  );
+  return plots.filter((p) => overlapFraction(tile, p) > OVERLAP_EPS);
+}
+
+// Single source of truth for what a placement costs, so the CLAIM button (ui.js)
+// and the actual purchase (purchase.js) can never disagree. `ownerId` is the
+// buyer: their own overlapped plots are replaced for free (land price only), while
+// each rival plot crossed costs its value scaled by how much of it you cover — and
+// that same scaled `fees` amount is what the rival is paid (coins stay conserved).
+export function computePlacement(tile, ownerId) {
+  const contested = findContested(tile);
+  const rivals = contested.filter((p) => p.owner_id !== ownerId);
+  const fees = rivals.map((p) => (Number(p.price_paid) || 0) * overlapFraction(tile, p));
+  const cost = placementCost(getPlotCount(), tile.coverage, fees);
+  return { contested, rivals, fees, cost };
 }
 
 // Outline the plots that would be overtaken right now (called while dragging).

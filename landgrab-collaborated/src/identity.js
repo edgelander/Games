@@ -32,28 +32,51 @@ function emitBalance() {
 const normalize = (name) => name.trim().toLowerCase();
 
 // Deduct coins for a purchase and persist. Returns the new balance.
+// The deduction is done server-side via the spend_balance RPC (atomic
+// `balance = balance - amount`), NOT an absolute write — so it can't clobber a
+// concurrent credit_balance() and snap the wallet back toward the 1000 start. We
+// update the local balance optimistically for instant UI, then reconcile to the
+// authoritative value the RPC returns.
 export async function spend(amount) {
   balance = Math.max(0, Math.round((balance - amount) * 100) / 100);
   emitBalance();
   if (isSupabaseConfigured) {
-    await supabase.from('players').update({ balance }).eq('id', currentPlayer.id);
+    const { data, error } = await supabase.rpc('spend_balance', {
+      p_id: currentPlayer.id, p_amount: amount,
+    });
+    if (error) console.error('[LandGrab] spend_balance failed:', error.message);
+    else if (data != null) { balance = Number(data); emitBalance(); }
   } else {
     localStorage.setItem(BAL_KEY, String(balance));
   }
   return balance;
 }
 
-// Mirror a credit that already happened server-side (the buyer's credit_balance
-// RPC pays us when our plot is overtaken). This only updates the LOCAL balance so
-// the wallet/leaderboard react immediately — no DB write, or we'd double-count.
-// On next login the authoritative players.balance confirms the amount.
-export function applyCredit(amount) {
-  const amt = Number(amount) || 0;
-  if (amt <= 0) return balance;
-  balance = Math.round((balance + amt) * 100) / 100;
-  emitBalance();
-  if (!isSupabaseConfigured) localStorage.setItem(BAL_KEY, String(balance));
-  return balance;
+// Subscribe to OUR OWN players row so the balance stays authoritative: whenever
+// the server-side balance changes we adopt the DB value (the source of truth). A
+// positive delta means someone overtook our land and paid us the scaled fee — the
+// exact amount the buyer was charged, which the plot row alone can't tell us — so
+// we report it via onCredit for the live "you got paid" toast. Our own spends
+// arrive with delta ≈ 0 (spend() already reconciled to the RPC's return), so they
+// don't toast. No-op without Supabase.
+export function subscribeBalance(onCredit) {
+  if (!isSupabaseConfigured || !currentPlayer.id) return;
+  supabase
+    .channel('player-balance')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'players', filter: `id=eq.${currentPlayer.id}` },
+      (payload) => {
+        const next = Number(payload.new?.balance);
+        if (Number.isNaN(next)) return;
+        const delta = next - balance;
+        if (delta === 0) return;
+        balance = next;
+        emitBalance();
+        if (delta > 0.5 && onCredit) onCredit(delta);
+      },
+    )
+    .subscribe();
 }
 
 // Show the login card and resolve with { username, pin }.
